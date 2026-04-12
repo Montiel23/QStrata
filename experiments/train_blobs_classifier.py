@@ -12,6 +12,7 @@ import json
 from qcore.backends.base import Backend
 
 from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
 
 def train(config, run_dir):
 
@@ -22,20 +23,28 @@ def train(config, run_dir):
     epochs = config["epochs"]
     dataset = config["dataset"]
     lr = config["lr"]
+    model_name = config["name"]
 
     # dataset
     if dataset == "blobs":
         from qcore.data.blobs import make_blobs
         X, y = make_blobs(200)
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
     elif dataset == "circles":
         from qcore.data.circles import make_quantum_circles
         X, y = make_quantum_circles(200)
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
 
-    y = y.float()
+    y_train, y_val = y_train.float(), y_val.float()
+    # y = y.float()
 
     clf = LogisticRegression()
-    clf.fit(X,y)
-    print("Baseline accuracy:", clf.score(X,y))
+    # clf.fit(X,y)
+    clf.fit(X_train, y_train)
+    # print("Baseline accuracy:", clf.score(X,y))
+    print("Baseline accuracy:", clf.score(X_train, y_train))
 
     #parameter count
     n_params = depth * n_qubits
@@ -43,10 +52,16 @@ def train(config, run_dir):
 
     #metrics containers
     losses = []
-    accuracies = []
-    precisions = []
-    recalls = []
-    f1_scores = []
+    train_accuracies = []
+    train_precisions = []
+    train_recalls = []
+    train_f1_scores = []
+    
+    val_accuracies = []
+    val_precisions = []
+    val_recalls = []
+    val_f1_scores = []
+
     grad_norms = []
     grad_means = []
     grad_stds = []
@@ -64,6 +79,7 @@ def train(config, run_dir):
     circ_drawing.draw()
     print("Total parameters:", quantum_model.theta.numel())
     
+    #training loop
     for epoch in range(epochs):
         optimizer.zero_grad()
 
@@ -72,6 +88,7 @@ def train(config, run_dir):
         epoch_state_norm = 0.0
         epoch_entropy = 0.0
         tp = fp = tn = fn = 0
+        val_tp = val_fp = val_tn = val_fn = 0
 
         for i in range(len(X)):
             # p, out, circuit = quantum_model.forward(X[i])
@@ -106,26 +123,6 @@ def train(config, run_dir):
                 
                 epoch_entropy = entropy.item()
 
-            # # entanglement entropy (2 qubits)
-            # if n_qubits == 2:
-            #     psi = out
-            #     rho = torch.outer(psi, torch.conj(psi))
-
-            #     rho_A = torch.zeros((2, 2), dtype=psi.dtype)
-
-            #     for a in range(2):
-            #         for b in range(2):
-            #             rho_A[a, b] = (
-            #                 rho[a*2 + 0, b*2 + 0] + rho[a*2 + 1, b*2 + 1]
-            #             )
-
-            #     eigvals = torch.linalg.eigvals(rho_A).real
-            #     eigvals = torch.clamp(eigvals, min=1e-12)
-
-            #     entropy = -torch.sum(eigvals * torch.log2(eigvals))
-
-            #     epoch_entropy += entropy.item()
-
         #epoch aggregates
         total_loss = total_loss / len(X)
         total_loss.backward()
@@ -146,7 +143,24 @@ def train(config, run_dir):
 
         optimizer.step()
 
-        acc, prec, rec, f1 = compute_metrics(tp, fp, tn, fn)
+
+        # validation
+        with torch.no_grad():
+
+            for j in range(len(X_val)):
+                p_val, _ = quantum_model.forward(X_val[j])
+                val_pred = (p_val > 0.5).float()
+                if val_pred == 1 and y_val[j] == 1:
+                    val_tp += 1
+                elif val_pred == 1 and y_val[j] == 0:
+                    val_fp += 1
+                elif val_pred == 0 and y_val[j] == 0:
+                    val_tn += 1
+                elif val_pred == 0 and y_val[j] == 1:
+                    val_fn += 1
+        
+        train_acc, train_prec, train_rec, train_f1 = compute_metrics(tp, fp, tn, fn)
+        val_acc, val_prec, val_rec, val_f1 = compute_metrics(val_tp, val_fp, val_tn, val_fn)
 
         epoch_state_norm /= len(X)
 
@@ -157,22 +171,36 @@ def train(config, run_dir):
 
         #store metrics
         losses.append(total_loss.item())
-        accuracies.append(acc)
-        precisions.append(prec)
-        recalls.append(rec)
-        f1_scores.append(f1)
+        train_accuracies.append(train_acc)
+        train_precisions.append(train_prec)
+        train_recalls.append(train_rec)
+        train_f1_scores.append(train_f1)
+
+        val_accuracies.append(val_acc)
+        val_precisions.append(val_prec)
+        val_recalls.append(val_rec)
+        val_f1_scores.append(val_f1)
+
         grad_norms.append(grad_norm)
         grad_means.append(grad_mean)
         grad_stds.append(grad_std)
         state_norms.append(epoch_state_norm)
         entropies.append(epoch_entropy)
 
+
+        
+
         print(
+            f"Train metrics: ||"
             f"Epoch {epoch+1} |"
             f"Loss {total_loss.item():.4f} |"
-            f"Acc {acc:.3f} |"
-            f"Rec {rec:.3f} |"
-            f"F1 {f1:.3f} |"
+            f"Acc {train_acc:.3f} |"
+            f"Rec {train_rec:.3f} |"
+            f"F1 {train_f1:.3f} ----- "
+            f"Val metrics: ||"
+            f"Acc {val_acc:.3f} |"
+            f"Rec {val_rec:.3f} |"
+            f"F1 {val_f1:.3f} |"
             f"GradNorm {grad_norm:.3e} |"
             f"Entropy {epoch_entropy:.3f}"
         )
@@ -181,16 +209,27 @@ def train(config, run_dir):
     
     # save metrics
     metrics = {
-        "loss": losses,
-        "accuracy": accuracies,
-        "precision": precisions,
-        "recall": recalls,
-        "f1": f1_scores,
+        "train_loss": losses,
+        "train_accuracy": train_accuracies,
+        "train_precision": train_precisions,
+        "train_recall": train_recalls,
+        "train_f1": train_f1_scores,
+        "val_accuracy": val_accuracies,
+        "val_precision": val_precisions,
+        "val_recall": val_recalls,
+        "val_f1": val_f1_scores,
         "grad_norm": state_norms,
         "entropy": entropies
     }
 
+    #save weights
+    model_path = os.path.join(run_dir, model_name + ".pt")
+    torch.save(quantum_model.state_dict(), model_path)
+
+    with open(os.path.join(run_dir, "config.json"), "w") as f:
+        json.dump(config, f, indent=2)
+        
     with open(os.path.join(run_dir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
 
-    return quantum_model, metrics
+    return quantum_model, metrics, (X_test, y_test)

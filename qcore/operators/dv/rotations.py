@@ -1,5 +1,6 @@
 import torch
 from qcore.base.single_qubit import SingleQubitGate
+import numpy as np
 
 class RX(SingleQubitGate):
     def __init__(self, theta, wire):
@@ -65,3 +66,23 @@ class RZ(SingleQubitGate):
         #     [torch.exp(-1j*theta/2), 0],
         #     [0, torch.exp(1j*theta/2)]
         # ], dtype=torch.complex64)
+
+class H(SingleQubitGate):
+    def __init__(self, wire):
+        # super().__init__("H", [wire])
+        super().__init__("H", wire)
+
+    def matrix(self):
+        # define 2x2 matrix
+        inv_sqrt = 1.0 / np.sqrt(2)
+
+        return torch.tensor([
+            [inv_sqrt, inv_sqrt],
+            [inv_sqrt, -inv_sqrt]
+        ], dtype=torch.complex64)
+
+
+        # row1 = torch.stack([inv_sqrt, inv_sqrt])
+        # row2 = torch.stack([inv_sqrt, -inv_sqrt])
+
+        # return torch.stack([row1, row2]).to(torch.complex64)

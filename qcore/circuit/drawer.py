@@ -11,9 +11,12 @@ def draw_ascii(circuit):
 
             w = op.wires[0]
 
+            #standardize name to be centered in a 4-character block
+            display_name = name.center(2)
+
             for i in range(n):
                 if i == w:
-                    wires[i] += f"─{name}─"
+                    wires[i] += f"─{display_name}─"
                 else:
                     wires[i] += "────"
 

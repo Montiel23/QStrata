@@ -1,5 +1,5 @@
 from qcore.circuit.circuit import Circuit
-from qcore.operators.dv.rotations import RX, RY, RZ
+from qcore.operators.dv.rotations import RX, RY, RZ, H
 from qcore.operators.dv.entanglers import CNOT
 import math
 
@@ -8,9 +8,14 @@ def ansatz(x, theta, n_qubits, depth, alpha):
 
     for d in range(depth):
 
+        #data encoding
         for q in range(n_qubits):
             feature_idx = q % len(x)
             circuit.add(RY(x[feature_idx] * alpha, q))
+
+        #add hadamard gate for entanglement
+        for q in range(n_qubits):
+            circuit.add(H(q))
 
         
         #variational layer

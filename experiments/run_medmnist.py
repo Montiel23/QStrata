@@ -9,6 +9,8 @@ from qcore.data.medical_loader import get_medical_data
 from experiments.test_medmnist import test
 from experiments.train_medmnist import train
 
+from experiments.physics_analysis import analyze_physics_metrics
+
 def parse_args():
     parser = argparse.ArgumentParser()
 

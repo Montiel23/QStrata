@@ -49,14 +49,26 @@ def draw_cv_ascii(ansatz):
             gates = "".join([f"[{g}]" for g in layer["single_mode"]])
             mode_lines[i] += f"--{gates}--"
 
-            # logic for beam splitter connections
-            if layer["two_mode"] == "BS":
+
+        if layer["two_mode"] == "BS":
+            for i in range(n_modes):
                 if i < n_modes - 1:
+                    #connect current mode and the one below it
+                    #we use a placeholder logic for 2-mode interactions
                     mode_lines[i] += "\u256c"
                     mode_lines[i+1] += "\u256c"
 
-                else:
+                elif i == n_modes -1 and n_modes % 2 != 0:
                     mode_lines[i] += "--"
+
+        # # logic for beam splitter connections
+        # if layer["two_mode"] == "BS":
+        #     if i < n_modes - 1:
+        #         mode_lines[i] += "\u256c"
+        #         mode_lines[i+1] += "\u256c"
+
+        #     else:
+        #         mode_lines[i] += "--"
 
     for line in mode_lines:
         print(line + "--[Readout]")

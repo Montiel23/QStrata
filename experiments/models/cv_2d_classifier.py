@@ -7,17 +7,21 @@ from qcore.physics.cv_measurement import realistic_homodyne_readout
 
 
 class CV2DClassifier(nn.Module):
-    def __init__(self, ansatz, hbar=2.0):
+    def __init__(self, ansatz, n_classes, hbar=2.0):
         super().__init__()
         self.ansatz = ansatz
         self.n_modes = ansatz.n_modes
         self.hbar = hbar
+        self.n_classes = n_classes
         self.backend = GaussianBackend(self.n_modes, hbar=hbar)
 
         #learnable bias for each mode to handle vacuum offset
         self.bias = nn.Parameter(torch.zeros(self.n_modes))
 
         #final linear mapping if n_modes != n_classes
+
+        self.post_processing = nn.Linear(self.n_modes, self.n_classes)
+        # self.post_processing = nn.Linear(self.n_modes, self.n_modes)
         
 
     def forward(self, x):
@@ -39,10 +43,19 @@ class CV2DClassifier(nn.Module):
             #apply noise/efficiency 
             readout = []
             for i in range(self.n_modes):
-                m_i = (mu[2*i]**2 + cov[2*i, 2*i]) + self.bias[i]
-                #add realistic constraints
-                m_i = realistic_homodyne_readout(m_i)
+                # pass mu, cov, and the current mode index 'i'
+                m_i = realistic_homodyne_readout(mu, cov, mode=i)
+
+                #apply the learnable bias AFTER the hardware noise simulation
+                m_i = m_i + self.bias[i]
                 readout.append(m_i)
+
+
+                
+                # m_i = (mu[2*i]**2 + cov[2*i, 2*i]) + self.bias[i]
+                # #add realistic constraints
+                # m_i = realistic_homodyne_readout(m_i)
+                # readout.append(m_i)
 
             results.append(torch.stack(readout))
 

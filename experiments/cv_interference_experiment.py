@@ -55,7 +55,8 @@ def train():
         X = torch.randn(32, args.modes)
         y = (torch.norm(X, dim=1) > 1.0).long()
 
-        logits = model(X)
+        # logits = model(X)
+        logits = model(X * 2.5)
         loss = criterion(logits, y)
         loss.backward()
 

@@ -122,23 +122,6 @@ def train(config, data, run_dir):
 
             epoch_entropy += entropy.item()
 
-
-        # total_loss = total_loss / len(x_train_input)
-        # total_loss.backward()
-
-        # grad = quantum_model.theta.grad
-
-        # if grad is not None:
-        #     grad_norm = grad.norm().item()
-
-        # else:
-        #     grad_norm = 0.0
-
-        # grad_norm = grad.norm().item()
-
-        # grad_mean = grad.mean().item()
-        # grad_std = grad.std().item()
-
         # gradient monitoring
         grad = quantum_model.theta.grad
         current_grad_norm = grad.norm().item() if grad is not None else 0.0
@@ -184,12 +167,6 @@ def train(config, data, run_dir):
         train_acc, train_prec, train_rec, train_f1 = compute_metrics(tp, fp, tn, fn)
         val_acc, val_prec, val_rec, val_f1 = compute_metrics(val_tp, val_fp, val_tn, val_fn)
 
-        # epoch_state_norm /= len(X_train)
-        # epoch_state_norm /= len(x_train_input)
-
-        # avg_epoch_entropy = epoch_entropy / len(X_train)
-        # avg_epoch_entropy = epoch_entropy / len(x_train_input)
-
         avg_loss = total_loss / len(x_train_input)
         avg_entropy = epoch_entropy / len(x_train_input)
 
@@ -208,12 +185,6 @@ def train(config, data, run_dir):
         val_recalls.append(val_rec.mean().item())
         val_f1_scores.append(val_f1.mean().item())
 
-        # grad_norms.append(grad_norm)
-        # grad_means.append(grad_mean)
-        # grad_stds.append(grad_std)
-        # state_norms.append(epoch_state_norm)
-        # entropies.append(avg_epoch_entropy)
-        
         entropies.append(float(avg_entropy))
         grad_norms.append(float(current_grad_norm))
         # state_norms.append(float(current_grad_norm))

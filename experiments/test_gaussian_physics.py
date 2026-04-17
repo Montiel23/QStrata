@@ -19,7 +19,9 @@ class SimpleCVRegressor(nn.Module):
         self.hbar = hbar
         self.backend = GaussianBackend(n_modes=1, hbar=hbar)
         #variational squeezing parameter
-        self.r = nn.Parameter(torch.tensor([0.1]))
+        # self.r = nn.Parameter(torch.tensor([0.1]))
+        self.r = nn.Parameter(torch.tensor([0.0]))
+        self.bias = nn.Parameter(torch.tensor([0.0]))
 
     def forward(self, x):
         mu, cov = self.backend.get_vacuum()
@@ -33,8 +35,9 @@ class SimpleCVRegressor(nn.Module):
         S = get_squeezing_matrix(1, 0, self.r)
         mu, cov = self.backend.apply_symplectic(mu, cov, S)
 
-        # readout
-        return quadrature_readout(mu, cov)
+        prediction = (mu[0]**2 + cov[0,0]) + self.bias
+
+        return prediction.view(-1)
 
 # experiment
 
@@ -51,7 +54,8 @@ def run_physics_test():
     for epoch in range(101):
         optimizer.zero_grad()
         #simple loop for 1d regression
-        outputs = torch.stack([model(val) for val in X_train])
+        # outputs = torch.stack([model(val) for val in X_train])
+        outputs = torch.cat([model(val) for val in X_train])
         loss = criterion(outputs, y_train)
         loss.backward()
         optimizer.step()
@@ -70,7 +74,9 @@ def run_physics_test():
     plt.ylabel("<X²> readout")
     plt.legend()
     plt.grid(True, alpha=0.3)
-    plt.show()
+    # plt.show()
+    plt.savefig("test_gaussian_physics.png", dpi=300)
+    plt.close()
 
 if __name__ == "__main__":
     run_physics_test()

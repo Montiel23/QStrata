@@ -9,11 +9,12 @@ import numpy as np
 from qcore.ansatz.cv_ansatz import GaussianVariationalAnsatz
 from experiments.models.cv_2d_classifier import CV2DClassifier
 from experiments.metrics import compute_metrics, calculate_purity
-from circuit.cv_drawing import draw_cv_ascii
+from qcore.circuit.drawer import draw_cv_ascii
 
 def train_cv_medmnist(config, data, run_dir):
     # setup configuration
     n_modes = config["n_modes"]
+    model_name = config["name"]
     n_classes = data["n_classes"]
     depth = config["depth"]
     epochs = config["epochs"]
@@ -24,10 +25,11 @@ def train_cv_medmnist(config, data, run_dir):
 
     x_train_input = torch.tensor(X_train, dtype=torch.float32)
     y_train_input = torch.tensor(y_train, dtype=torch.long)
-
-
     
     X_val, y_val = data["val"]
+
+    X_val = torch.tensor(X_val, dtype=torch.float32)
+    y_val = torch.tensor(y_val, dtype=torch.long)
 
     #initialize model
     ansatz = GaussianVariationalAnsatz(n_modes=n_modes, depth=depth)
@@ -48,7 +50,7 @@ def train_cv_medmnist(config, data, run_dir):
     history = {
         "train_loss": [], "train_acc": [], "train_prec": [], "train_rec": [], "train_f1": [], 
         "val_acc": [], "val_prec": [], "val_rec": [], "val_f1": [],
-        "grad_norm": [], "purity": [], "time": [], "learning_rates": []
+        "grad_norm": [], "purity": [], "epoch_time": [], "learning_rates": []
     }
 
     lr_history = []
@@ -58,6 +60,7 @@ def train_cv_medmnist(config, data, run_dir):
         train_conf_matrix = torch.zeros((n_classes, n_classes), dtype=torch.int32)
         total_loss = 0.0
         epoch_purity = 0.0
+        epoch_grad_norms = []
 
         # train_loop = tqdm(range(len(X_train)), desc=f"Epoch {epoch+1}/{epochs} [CV Train]")
         train_loop = tqdm(range(len(x_train_input)), desc=f"Epoch {epoch+1}/{epochs} [CV Train]")
@@ -73,8 +76,11 @@ def train_cv_medmnist(config, data, run_dir):
             # logits = model(x_input)
             # loss = criterion(logits, target)
 
-            logits = model(x_train_input[i])
-            loss = criterion(logits, y_train[i])
+            # logits = model(x_train_input[i])
+            # loss = criterion(logits, y_train_input[i])
+            logits = model(x_train_input[i].unsqueeze(0))
+            target = y_train_input[i].unsqueeze(0)
+            loss = criterion(logits, target)
 
             #backward pass
             loss.backward()
@@ -87,9 +93,18 @@ def train_cv_medmnist(config, data, run_dir):
                     total_norm += param_norm.item() ** 2
             current_grad_norm = total_norm ** 0.5
 
-            
+            epoch_grad_norms.append(current_grad_norm)
+
+
+            #gradient clipping preventing exploding gradient
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), mar_norm=1.0)
+            nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
             optimizer.step()
+            with torch.no_grad():
+                for name, param in model.named_parameters():
+                    if "squeezing" in name:
+                        param.clamp_(-2.0, 2.0)
 
             #metrics
             total_loss += loss.item()
@@ -98,16 +113,31 @@ def train_cv_medmnist(config, data, run_dir):
 
             #physics monitoring: purity 
             _, last_conv = model.backend.get_vacuum()
-            epoch_purity += calculate_purity(last_cov, hbar)
+            epoch_purity += calculate_purity(last_conv, hbar)
 
+
+        avg_grad_norm = np.mean(epoch_grad_norms)
+        history["grad_norm"].append(float(avg_grad_norm))
+        
+        
         # validation phase
         model.eval()
         val_conf_matrix = torch.zeros((n_classes, n_classes), dtype=torch.int32)
         with torch.no_grad():
             for j in range(len(X_val)):
-                x_v = torch.tensor(X_val[j], dtype=torch.float32).unsqueeze(0)
-                l_v = model(x_v)
-                val_conf_matrix[int(y_val[j]), torch.argmax(l_v).item()] += 1
+                logits = model(X_val[j].unsqueeze(0))
+
+
+                pred = torch.argmax(logits, dim=1).item()
+                target_idx = y_val[j].item()
+
+                val_conf_matrix[target_idx, pred] += 1
+
+                
+                # target = y_val_input[j].unsqueeze(0)
+                # x_v = torch.tensor(X_val[j], dtype=torch.float32).unsqueeze(0)
+                # l_v = model(x_v)
+                # val_conf_matrix[int(y_val[j]), torch.argmax(l_v).item()] += 1
 
         #epoch metrics
         scheduler.step()
@@ -135,13 +165,14 @@ def train_cv_medmnist(config, data, run_dir):
         val_acc, val_prec, val_rec, val_f1 = compute_metrics(val_tp, val_fp, val_tn, val_fn)
 
         avg_loss = total_loss / len(X_train)
-        grad_norm
+        # grad_norm
 
-        epoch_duration = time.time() - epoch_start_time
+        epoch_duration = time.time() - epoch_start
 
         #store metrics
 
-        history["train_loss"].append(avg_loss.item())
+        # history["train_loss"].append(avg_loss.item())
+        history["train_loss"].append(avg_loss)
         history["train_acc"].append(train_acc.mean().item())
         history["train_rec"].append(train_rec.mean().item())
         history["train_prec"].append(train_prec.mean().item())
@@ -152,23 +183,26 @@ def train_cv_medmnist(config, data, run_dir):
         history["val_prec"].append(val_prec.mean().item())
         history["val_f1"].append(val_f1.mean().item())
 
-        history["grad_norm"].append(float(
-        history["purity"].append(float(epoch_purity))
+        # history["grad_norm"].append(float(
+        history["purity"].append(float(epoch_purity) / len(x_train_input))
         history["epoch_time"].append(epoch_duration)
 
         print(
             f"Train metrics: ||"
             f"Epoch {epoch+1} |"
-            f"Loss {avg_loss.item():.4f} |"
+            # f"Loss {avg_loss.item():.4f} |"
+            f"Loss {avg_loss:.4f} |"
             f"Acc {train_acc.mean().item():.3f} |"
             f"Rec {train_rec.mean().item():.3f} |"
-            f"F1 {train_f1.mean().item():3f} ---- "
+            f"F1 {train_f1.mean().item():.3f} ---- "
             f"Val metrics: ||"
             f"Acc {val_acc.mean().item():.3f} |"
             f"Rec {val_rec.mean().item():.3f} |"
             f"F1 {val_f1.mean().item():.3f} |"
-            f"GradNorm {current_grad_norm:.3e} |"
-            f"Entropy {avg_entropy:.3f}"
+            # f"GradNorm {current_grad_norm:.3e} |"
+            f"GradNorm {avg_grad_norm:.3e} |"
+            f"Purity {epoch_purity / len(x_train_input):.3f} |"
+            # f"Entropy {avg_entropy:.3f}"
         )
 
         print(f"Time: {epoch_duration:.2f}s")
@@ -192,12 +226,14 @@ def train_cv_medmnist(config, data, run_dir):
 
     #save weights
     model_path = os.path.join(run_dir, model_name + ".pt")
-    torch.save(quantum_model.state_dict(), model_path)
+    # torch.save(quantum_model.state_dict(), model_path)
+    torch.save(model.state_dict(), model_path)
 
     with open(os.path.join(run_dir, "config.json"), "w") as f:
-        json.dum(config, f, indent=2)
+        json.dump(config, f, indent=2)
 
     with open(os.path.join(run_dir, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
 
-    return quantum_model, metrics
+    # return quantum_model, metrics
+    return model, metrics

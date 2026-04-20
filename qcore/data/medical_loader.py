@@ -58,9 +58,14 @@ def get_medical_data(data_flag='pathmnist', n_components=4, n_samples=None):
 
     # pca pipeline (flatten -> scale -> pca)
 
-    X_train_flat = X_train_raw.reshape(len(X_train_raw), - 1).astype(float)
-    X_val_flat = X_val_raw.reshape(len(X_val_raw), -1).astype(float)
-    X_test_flat = X_test_raw.reshape(len(X_test_raw), -1).astype(float)
+    # X_train_flat = X_train_raw.reshape(len(X_train_raw), - 1).astype(float)
+    # X_val_flat = X_val_raw.reshape(len(X_val_raw), -1).astype(float)
+    # X_test_flat = X_test_raw.reshape(len(X_test_raw), -1).astype(float)
+
+
+    X_train_flat = X_train_raw.reshape(len(X_train_raw), - 1).astype(np.float32)
+    X_val_flat = X_val_raw.reshape(len(X_val_raw), -1).astype(np.float32)
+    X_test_flat = X_test_raw.reshape(len(X_test_raw), -1).astype(np.float32)
 
     #fit the PCA on Train only
     # scaler = StandardScaler()
@@ -76,9 +81,9 @@ def get_medical_data(data_flag='pathmnist', n_components=4, n_samples=None):
     X_test_pca = pca.transform(quantum_scaler.transform(X_test_flat))
 
     data = {
-        'train': (X_train_pca, y_train),
-        'val': (X_val_pca, y_val),
-        'test': (X_test_pca, y_test),
+        'train': (X_train_pca, y_train.astype(np.int64)),
+        'val': (X_val_pca, y_val.astype(np.int64)),
+        'test': (X_test_pca, y_test.astype(np.int64)),
         'n_classes': len(info['label']),
         'original_images': X_train_raw
     }

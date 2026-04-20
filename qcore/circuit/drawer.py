@@ -41,7 +41,9 @@ def draw_cv_ascii(ansatz):
     manifest = ansatz.get_circuit_manifest()
 
     #initialize the lines for each mode
-    mode_lines = [f"m{i}: --[D]--" for i in range(n_modes)]
+    # mode_lines = [f"m{i}: --[D]--" for i in range(n_modes)]
+
+    mode_lines = [f"m{i}: --" for i in range(n_modes)]
 
     for layer in manifest:
         for i in range(n_modes):

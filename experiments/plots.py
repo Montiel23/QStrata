@@ -9,22 +9,25 @@ from sklearn.preprocessing import StandardScaler, label_binarize
 from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, PrecisionRecallDisplay
 from scipy.stats import multivariate_normal
 
-def plot_mode_wigner(mu, cov, mode_idx, run_dir):
+# def plot_mode_wigner(mu, cov, mode_idx, run_dir):
+def plot_mode_wigner(mu, cov, mode_idx, save_path):
     #extract 2d mean and 2x2 cov for specific mode
-    m = mu[2*mode_idx : 2*mode_idx+2].detach().numpy()
-    v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().numpy()
+    # m = mu[2*mode_idx : 2*mode_idx+2].detach().numpy()
+    m = mu[2*mode_idx : 2*mode_idx+2].detach().cpu().numpy()
+    # v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().numpy()
+    v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().cpu().numpy()
 
     #create grid
     x, y = np.mgrid[-5:5:.05, -5:5:0.05]
     pos = np.dstack((x, y))
-    rv = multivariate_normal(m, v)
+    rv = multivariate_normal(m, v, allow_singular=True)
 
     plt.figure(figsize=(6, 5))
     plt.contourf(x, y, rv.pdf(pos), cmap='viridis')
     plt.xlabel("X (Position)")
     plt.ylabel("P (Momentum)")
     plt.colorbar(label="Wigner quasi-probability")
-    plt.savefig(os.path.join(run_dir, "wigner_function.png"), dpi=300)
+    plt.savefig(os.path.join(save_path), dpi=300)
     plt.close()
 
 
@@ -202,7 +205,7 @@ def analyze_pca(data, n_components_list=[2, 4, 8, 16, 32], run_dir="results"):
         
         # Display the "Quantum-eye view"
         axes[i + 1].imshow(X_recon[0].reshape(28, 28), cmap='gray', vmin=0, vmax=1)
-        axes[i + 1].set_title(f"n={n} (Qubits)")
+        axes[i + 1].set_title(f"n={n} (components)")
         axes[i + 1].axis('off')
 
     plt.tight_layout()
@@ -213,4 +216,4 @@ def analyze_pca(data, n_components_list=[2, 4, 8, 16, 32], run_dir="results"):
     
     # Return the variance ratio for the current n_qubits for your logs
     var_retained = np.cumsum(pca_full.explained_variance_ratio_)[n_components_list[1]] # index 1 is '4'
-    print(f"Analysis complete. 4 Qubits retain {var_retained*100:.2f}% of image variance.")
+    print(f"Analysis complete. 4 components retain {var_retained*100:.2f}% of image variance.")

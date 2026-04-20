@@ -19,7 +19,6 @@ def test(model, data, run_dir, hbar=2.0):
     
     all_logits = []
     all_targets = []
-    hbar = hbar
     purity = 0.0
     
     with torch.no_grad():
@@ -48,21 +47,22 @@ def test(model, data, run_dir, hbar=2.0):
                 wigner_samples[target] = (mu.clone(), cov.clone())
 
             test_conf_matrix[target, pred] += 1
-            all_logits.append(logits.numpy())
-            all_target.append(int(y_test[i]))
+            # all_logits.append(logits.numpy())
+            all_logits.append(logits.detach().cpu().numpy().squeeze())
+            all_targets.append(int(y_test[i]))
 
 
     # generate wigner plots
     wigner_dirs = os.path.join(run_dir, "wigners")
-    os.makedirs(wigner_dir, exist_ok=True)
-    for cls_id, (mu_w, cov_w) in wigner_sapmles.items():
+    os.makedirs(wigner_dirs, exist_ok=True)
+    for cls_id, (mu_w, cov_w) in wigner_samples.items():
         plot_mode_wigner(mu_w, cov_w, mode_idx=0,
-                         save_path=os.path.join(wigner_dir, f"class_{cls_id}_wigner.png"))
+                         save_path=os.path.join(wigner_dirs, f"class_{cls_id}_wigner.png"))
         
 
     #aggregate metrics
     avg_purity = np.mean([np.mean(p) for p in class_purity.values() if p])
-    avg_snr = {f"class_{c}_snr_dv": 10 * np.log10(np.mean(s)) for c, s in class_snr.items() if s}
+    avg_snr = {f"class_{c}_snr_cv": 10 * np.log10(np.mean(s) + 1e-9) for c, s in class_snr.items() if s}
 
 
     all_logits = np.array(all_logits)
@@ -93,13 +93,13 @@ def test(model, data, run_dir, hbar=2.0):
 
     # 6. Save JSON
     metrics = {
-        "test_accuracy": acc.mean().item(),
-        "test_precision": prec.mean().item(),
-        "test_recall": rec.mean().item(),
-        "test_f1": f1.mean().item(),
+        "test_accuracy": float(acc.mean().item()),
+        "test_precision": float(prec.mean().item()),
+        "test_recall": float(rec.mean().item()),
+        "test_f1": float(f1.mean().item()),
         # "test_purity": purity.mean().item()
-        "test_purity": avg_purity,
-        **avg_snr
+        "test_purity": float(avg_purity),
+        **{k: float(v) for k, v in avg_snr.items()}
     }
     with open(os.path.join(run_dir, "test-metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import numpy as np
 # from qcore.backends.gaussian_backend import GaussianBackend
 from qcore.backends.cvBackend import GaussianBackend
 from qcore.physics.symplectic import get_displacement_vector, get_beamsplitter_matrix, get_rotation_matrix
@@ -26,6 +27,10 @@ class CV2DClassifier(nn.Module):
 
     def forward(self, x):
         # x shape: [batch_size, n_features]
+
+        if x.ndim == 1:
+            x = x.unsqueeze(0)
+        
         results = []
         for sample in x:
             mu, cov = self.backend.get_vacuum()
@@ -33,8 +38,19 @@ class CV2DClassifier(nn.Module):
             #data encoding (displacement)
             #scaling features to alpha
             for i in range(self.n_modes):
-                alpha = torch.complex(sample[i] / torch.sqrt(torch.tensor(2*self.hbar)), torch.tensor(0.0))
+                val = sample[i].item() / np.sqrt(2 * self.hbar)
+
+                alpha_real = torch.tensor(val, dtype=torch.float32)
+                alpha_imag = torch.tensor(0.0, dtype=torch.float32)
+
+                alpha = torch.complex(alpha_real, alpha_imag)
+
+                
+                # alpha = torch.complex(torch.tensor(val), torch.tensor(0.0))
+                
                 mu = mu + get_displacement_vector(self.n_modes, i, alpha, hbar=self.hbar)
+                # alpha = torch.complex(sample[i] / torch.sqrt(torch.tensor(2*self.hbar)), torch.tensor(0.0))
+                # mu = mu + get_displacement_vector(self.n_modes, i, alpha, hbar=self.hbar)
 
             #apply ansatz
             mu, cov = self.ansatz.apply(mu, cov, self.backend)

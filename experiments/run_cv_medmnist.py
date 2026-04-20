@@ -7,6 +7,7 @@ import numpy as np
 #internal imports
 from qcore.data.medical_loader import get_medical_data
 from experiments.train_cv_medmnist import train_cv_medmnist
+from experiments.test_cv_medmnist import test
 from experiments.plots import analyze_pca
 from experiments.test_cv_medmnist import test
 
@@ -17,10 +18,10 @@ def main():
     parser.add_argument("--modes", type=int, default=2, help="Number of quantum modes/PCA components")
     parser.add_argument("--depth", type=int, default=2, help="Ansatz depth")
     parser.add_argument("--epochs", type=int, default=50)
-    parser.add_argument("--lr", type=int, default=0.01)
+    parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--samples", type=int, default=500)
     parser.add_argument("--noise", type=float, default=0.05)
-    parser.parse_args()
+    args = parser.parse_args()
 
     #unique results directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -34,6 +35,9 @@ def main():
         n_components=args.modes,
         n_samples=args.samples
     )
+
+    print("Generating PCA analysis")
+    analyze_pca(data, run_dir=run_dir)
 
     #setup config dict
     config = {
@@ -51,7 +55,7 @@ def main():
     model, metrics = train_cv_medmnist(config, data, run_dir)
 
     #test
-    metrics = test_cv_medmnist(model, data, run_dir)
+    metrics = test(model, data, run_dir)
 
 if __name__ == "__main__":
     main()

@@ -23,6 +23,34 @@ class CV2DClassifier(nn.Module):
 
         self.post_processing = nn.Linear(self.n_modes, self.n_classes)
         # self.post_processing = nn.Linear(self.n_modes, self.n_modes)
+
+
+    def get_state_for_sample(self, x_sample):
+        "return final gaussian state (mu, cov) for single input after encoding and passing through ansatz"
+
+        self.eval()
+        with torch.no_grad():
+            # start vacuum state
+            mu, cov = self.backend.get_vacuum()
+
+            #data encoding (displacement)
+            if x_sample.ndim > 1:
+                x_sample = x_sample.squeeze()
+
+            for i in range(self.n_modes):
+                val = x_sample[i].item() / np.sqrt(2 * self.hbar)
+                
+                alpha_real = torch.tensor(val, dtype=torch.float32)
+                alpha_imag = torch.tensor(0.0, dtype=torch.float32)
+
+                alpha = torch.complex(alpha_real, alpha_imag)
+
+                mu = mu + get_displacement_vector(self.n_modes, i, alpha, hbar=self.hbar)
+
+            # apply ansatz
+            mu_out, cov_out = self.ansatz.apply(mu, cov, self.backend)
+
+        return mu_out, cov_out
         
 
     def forward(self, x):

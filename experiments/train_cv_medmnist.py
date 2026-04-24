@@ -8,8 +8,11 @@ import numpy as np
 
 from qcore.ansatz.cv_ansatz import GaussianVariationalAnsatz
 from experiments.models.cv_2d_classifier import CV2DClassifier
-from experiments.metrics import compute_metrics, calculate_purity
+from experiments.metrics import compute_metrics, calculate_purity, count_quantum_resources
 from qcore.circuit.drawer import draw_cv_ascii
+
+from experiments.plots import plot_mode_wigner
+
 
 def train_cv_medmnist(config, data, run_dir):
     # setup configuration
@@ -19,7 +22,8 @@ def train_cv_medmnist(config, data, run_dir):
     depth = config["depth"]
     epochs = config["epochs"]
     lr = config["lr"]
-    hbar = config.get("hbar", 2.0)
+    # hbar = config.get("hbar", 2.0)
+    hbar = config["noise"]
 
     X_train, y_train = data["train"]
 
@@ -33,6 +37,12 @@ def train_cv_medmnist(config, data, run_dir):
 
     #initialize model
     ansatz = GaussianVariationalAnsatz(n_modes=n_modes, depth=depth)
+    resources = count_quantum_resources(ansatz=ansatz)
+
+    print(f"\nTrainable weights {resources['Trainable_weights']} |"
+          f"Single-Mode gates {resources['Single_mode_gates']} |"
+          f"Two-Mode Gates {resources['Two_mode_gates']} |\n")
+    
     model = CV2DClassifier(ansatz, n_classes=n_classes, hbar=hbar)
 
     #draw circuit once for verification
@@ -104,7 +114,9 @@ def train_cv_medmnist(config, data, run_dir):
             with torch.no_grad():
                 for name, param in model.named_parameters():
                     if "squeezing" in name:
-                        param.clamp_(-2.0, 2.0)
+                        # param.clamp_(-2.0, 2.0)
+                        limit = config.get("max_squeezing", 2.0)
+                        param.clamp_(-limit, limit)
 
             #metrics
             total_loss += loss.item()
@@ -139,6 +151,12 @@ def train_cv_medmnist(config, data, run_dir):
                 # l_v = model(x_v)
                 # val_conf_matrix[int(y_val[j]), torch.argmax(l_v).item()] += 1
 
+
+        if epoch % 1 == 0:
+            # use a consistent sample to see how its Wigner state evolves
+            sample_mu, sample_cov = model.get_state_for_sample(X_val[0])
+            plot_mode_wigner(sample_mu, sample_cov, mode_idx=0, save_path = os.path.join(run_dir, f"trace_epoch_{epoch}.png"))
+        
         #epoch metrics
         scheduler.step()
         current_lr = scheduler.get_last_lr()[0]

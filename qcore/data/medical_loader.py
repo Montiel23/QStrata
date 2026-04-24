@@ -69,7 +69,8 @@ def get_medical_data(data_flag='pathmnist', n_components=4, n_samples=None):
 
     #fit the PCA on Train only
     # scaler = StandardScaler()
-    quantum_scaler = MinMaxScaler(feature_range=(0, np.pi))
+    # quantum_scaler = MinMaxScaler(feature_range=(0, np.pi))
+    quantum_scaler = StandardScaler()
     # X_train_scaled = scaler(X_train_flat)
     X_train_scaled = quantum_scaler.fit_transform(X_train_flat)
 

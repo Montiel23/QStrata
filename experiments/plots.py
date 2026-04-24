@@ -2,12 +2,57 @@ import matplotlib.pyplot as plt
 import os
 import torch
 import numpy as np
+import pandas as pd
 
+
+import seaborn as sns
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler, label_binarize
 
 from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, PrecisionRecallDisplay
 from scipy.stats import multivariate_normal
+
+
+def generate_phase_diagram(results_list, run_dir):
+    phase_df = pd.DataFrame(results_list)
+
+    pivot_table = phase_df.pivot(index="noise", columns="s_limit", values="f1")
+
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(pivot_table, annot=True, cmap="viridis", xticklabels=True, yticklabels=True)
+
+    plt.savefig(os.path.join(run_dir, "phase.png"), dpi=300)
+    plt.close()
+
+# def generate_phase_diagram(model, config, run_dir, data, noise_range, squeezing_range):
+#     X_test, y_test = data["test"]
+
+#     results = []
+#     for noise in noise_range:
+#         for s_limit in squeezing_range:
+#             #update config
+#             config.noise = noise
+#             config.max_squeezing = s_limit
+
+#             #run a quick validation epoch
+#             f1 = run_minimal_val(model, X_test, y_test, config)
+#             results.append({'noise': noise, 's_limit': s_limit, 'f1': f1})
+
+#     phase_df = pd.DataFrame(results)
+#     pivot_table = phase_df.pivot(index='noise', columns = 's_limit', values="f1")
+
+#     plt.figure(figsize=(10, 8))
+#     sns.heatmap(pivot_table, annot=True, cmap='viridis', xticklabels=True, yticklabels=True)
+#     plt.savefig(os.path.join(run_dir, "phase.png"), dpi=300)
+#     plt.close()
+
+def plot_fidelity_matrix(f_matrix, run_dir):
+    plt.figure(figsize=(10,8))
+    sns.heatmap(f_matrix, annot=True, cmap='viridis', xticklabels=True, yticklabels=True)
+    plt.xlabel("Class ID")
+    plt.ylabel("Class ID")
+    plt.savefig(os.path.join(run_dir, "fidelity.png"), dpi=300)
+    plt.close()
 
 # def plot_mode_wigner(mu, cov, mode_idx, run_dir):
 def plot_mode_wigner(mu, cov, mode_idx, save_path):

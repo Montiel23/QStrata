@@ -8,7 +8,7 @@ import numpy as np
 from qcore.data.medical_loader import get_medical_data
 from experiments.train_cv_medmnist import train_cv_medmnist
 from experiments.test_cv_medmnist import test
-from experiments.plots import analyze_pca, plot_fidelity_matrix, generate_phase_diagram
+from experiments.plots import analyze_pca, plot_fidelity_matrix, generate_phase_diagram, plot_class_distribution, diagnostic_pca_boxplot
 from experiments.test_cv_medmnist import test, run_minimal_val
 from experiments.metrics import analyze_state_separation
 
@@ -24,6 +24,8 @@ def main():
     parser.add_argument("--samples", type=int, default=500)
     parser.add_argument("--noise", type=float, default=0.5)
     parser.add_argument("--squeeze", type=float, default=0.5)
+    parser.add_argument("--encoding", type=float, default=20.0)
+    parser.add_argument("--batch", type=int, default=16)
     args = parser.parse_args()
 
     #unique results directory
@@ -39,8 +41,27 @@ def main():
         n_samples=args.samples
     )
 
+    plot_class_distribution(data, run_dir)
+
     print("Generating PCA analysis")
     analyze_pca(data, run_dir=run_dir)
+
+    X_train_pca, y_train_pca = data["train"]
+
+    diagnostic_pca_boxplot(X_train_pca, y_train_pca, run_dir, name="pre-processing")
+
+    X_train_tensor = torch.tensor(X_train_pca, dtype=torch.float32)
+
+    # X_transformed = torch.sign(X_train_tensor) * (X_train_tensor ** 2)
+    X_transformed = torch.tanh(X_train_tensor) * 3.0
+
+    for i in range(X_transformed.shape[-1]):
+        col = X_transformed[..., i]
+        # X_transformed[..., i] = (col - col.mean()) / (col.std() + 1e-6)
+        X_transformed[..., i] = (col - col.mean()) / (1.0)
+
+    # diagnostic_pca_boxplot(X_train_tensor.numpy(), y_train_pca, run_dir, name="post-processing")
+    diagnostic_pca_boxplot(X_transformed.numpy(), y_train_pca, run_dir, name="post-processing")
 
     #setup config dict
     config = {
@@ -51,9 +72,13 @@ def main():
         "epochs": args.epochs,
         "lr": args.lr,
         "noise": args.noise,
-        "squeeze": args.squeeze
+        "squeeze": args.squeeze,
+        "encoding": args.encoding,
+        "batch_size": args.batch,
         # "hbar": 2.0
     }
+
+    phase_results = []
 
     #train
     model, metrics = train_cv_medmnist(config, data, run_dir)
@@ -65,8 +90,8 @@ def main():
     f_matrix = analyze_state_separation(test_results, model.n_classes, args.noise)
     plot_fidelity_matrix(f_matrix, run_dir)
 
-    noise_range = np.arange(0.5, args.noise, 0.5)
-    squeezing_range = np.arange(0.5, args.squeeze, 0.5)
+    noise_range = np.linspace(0.5, args.noise, num=5)
+    squeezing_range = np.linspace(0.1, args.squeeze, num=5)
 
     #phase diagram
     phase_results = run_minimal_val(model, data, config, run_dir, noise_range, squeezing_range)

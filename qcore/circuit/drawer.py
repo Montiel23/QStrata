@@ -52,16 +52,32 @@ def draw_cv_ascii(ansatz):
             mode_lines[i] += f"--{gates}--"
 
 
-        if layer["two_mode"] == "BS":
-            for i in range(n_modes):
-                if i < n_modes - 1:
-                    #connect current mode and the one below it
-                    #we use a placeholder logic for 2-mode interactions
-                    mode_lines[i] += "\u256c"
-                    mode_lines[i+1] += "\u256c"
+        #draw ring connections
+        for i in range(n_modes):
+            if i < n_modes - 1:
+                mode_lines[i] += "╬--"
+            else:
+                #wrap-around
+                mode_lines[i] += "↺--"
+                mode_lines[0] = mode_lines[0][:-2] + "↺--"
 
-                elif i == n_modes -1 and n_modes % 2 != 0:
-                    mode_lines[i] += "--"
+    for line in mode_lines:
+        print(line + "[Readout]")
+    print("-" * 67 + "\n")
+
+
+        # if layer["two_mode"] == "BS":
+        #     for i in range(n_modes):
+        #         if i < n_modes - 1:
+        #             #connect current mode and the one below it
+        #             #we use a placeholder logic for 2-mode interactions
+        #             mode_lines[i] += "\u256c"
+        #             mode_lines[i+1] += "\u256c"
+
+        #         elif i == n_modes -1 and n_modes % 2 != 0:
+        #             mode_lines[i] += "--"
+
+
 
         # # logic for beam splitter connections
         # if layer["two_mode"] == "BS":
@@ -72,9 +88,9 @@ def draw_cv_ascii(ansatz):
         #     else:
         #         mode_lines[i] += "--"
 
-    for line in mode_lines:
-        print(line + "--[Readout]")
-    print("-------------------------------------------------------------------\n")
+    # for line in mode_lines:
+    #     print(line + "--[Readout]")
+    # print("-------------------------------------------------------------------\n")
 
 
 # def draw_cv_ascii(n_modes, depth):

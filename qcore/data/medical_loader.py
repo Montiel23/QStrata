@@ -56,12 +56,6 @@ def get_medical_data(data_flag='pathmnist', n_components=4, n_samples=None):
     X_val_raw, y_val = process_split(val_dataset, val_size)
     X_test_raw, y_test = process_split(test_dataset, val_size)
 
-    # pca pipeline (flatten -> scale -> pca)
-
-    # X_train_flat = X_train_raw.reshape(len(X_train_raw), - 1).astype(float)
-    # X_val_flat = X_val_raw.reshape(len(X_val_raw), -1).astype(float)
-    # X_test_flat = X_test_raw.reshape(len(X_test_raw), -1).astype(float)
-
 
     X_train_flat = X_train_raw.reshape(len(X_train_raw), - 1).astype(np.float32)
     X_val_flat = X_val_raw.reshape(len(X_val_raw), -1).astype(np.float32)
@@ -77,16 +71,32 @@ def get_medical_data(data_flag='pathmnist', n_components=4, n_samples=None):
     pca = PCA(n_components=n_components)
     X_train_pca = pca.fit_transform(X_train_scaled)
 
-    #transform val and test using train parameters
+    # scale the PCA components (normalization)
+    physical_scaler = StandardScaler()
+    X_train_final = physical_scaler.fit_transform(X_train_pca)
+
+    # do the same with val/test
     X_val_pca = pca.transform(quantum_scaler.transform(X_val_flat))
+    X_val_final = physical_scaler.fit_transform(X_val_pca)
+
     X_test_pca = pca.transform(quantum_scaler.transform(X_test_flat))
+    X_test_final = physical_scaler.fit_transform(X_test_pca)
+
 
     data = {
-        'train': (X_train_pca, y_train.astype(np.int64)),
-        'val': (X_val_pca, y_val.astype(np.int64)),
-        'test': (X_test_pca, y_test.astype(np.int64)),
-        'n_classes': len(info['label']),
-        'original_images': X_train_raw
+        "train": (X_train_final, y_train.astype(np.int64)),
+        "val": (X_val_final, y_val.astype(np.int64)),
+        "test": (X_test_final, y_test.astype(np.int64)),
+        "n_classes": (len(info['label'])),
+        "original_images": X_train_raw
     }
+
+
+    x_sample = data["train"][0]
+
+    print("----- PCA Feature Audit -----")
+    print(f"Mean: {x_sample.mean(axis=0)}")
+    print(f"Std: {x_sample.std(axis=0)}")
+    print(f"min/max: {x_sample.min()} / {x_sample.max()}")
 
     return data, pca, quantum_scaler

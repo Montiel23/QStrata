@@ -13,38 +13,71 @@ from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, PrecisionRe
 from scipy.stats import multivariate_normal
 
 
+def diagnostic_pca_boxplot(X_pca, y_labels, run_dir, name=None):
+    "X_pca np array (samples, pca_components)"
+    "y_labels np array (samples,)"
+
+    df = pd.DataFrame(X_pca, columns=[f"PCA_{i}" for i in range(X_pca.shape[1])])
+    df["Class"] = y_labels.flatten()
+
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+    axes = axes.flatten()
+
+    for i in range(4):
+        sns.boxplot(x="Class", y=f"PCA_{i}", data=df, ax=axes[i])
+        axes[i].set_title(f"Distribution of PCA component {i}")
+        axes[i].grid(axis="y", linestyle="--", alpha=0.6)
+    
+    plt.tight_layout()
+    # plt.savefig(os.path.join(run_dir, "pca_class_separation.png"), dpi=300)
+    plt.savefig(os.path.join(run_dir, f"pca_class_separation_{name}.png"), dpi=300)
+    plt.close()
+
+def plot_class_distribution(data_dict, run_dir):
+    n_classes = data_dict["n_classes"]
+    labels_train = data_dict["train"][1]
+    labels_val = data_dict["val"][1]
+    labels_test = data_dict["test"][1]
+
+    #count occurrences
+    train_counts = np.bincount(labels_train.flatten(), minlength=n_classes)
+    val_counts = np.bincount(labels_val.flatten(), minlength=n_classes)
+    test_counts = np.bincount(labels_test.flatten(), minlength=n_classes)
+
+    x = np.arange(n_classes)
+    width = 0.25
+
+    plt.figure(figsize=(12, 6))
+    plt.bar(x - width, train_counts, width, label="Train", color="#1f77b4")
+    plt.bar(x, val_counts, width, label="val", color="#ff7f0e")
+    plt.bar(x + width, test_counts, width, label="Test", color="#2ca02c")
+
+    plt.xlabel("Class ID")
+    plt.ylabel("Number of samples")
+    plt.xticks(x)
+    plt.legend()
+    plt.grid(axis='y', linestyle="--", alpha=0.7)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(run_dir, "data_distribution.png"), dpi=300)
+
 def generate_phase_diagram(results_list, run_dir):
     phase_df = pd.DataFrame(results_list)
 
-    pivot_table = phase_df.pivot(index="noise", columns="s_limit", values="f1")
+    #foce everything to numeric
+    phase_df["f1"] = pd.to_numeric(phase_df["f1"], errors="coerce")
+    phase_df["noise"] = pd.to_numeric(phase_df["noise"], errors="coerce")
+    phase_df["s_limit"] = pd.to_numeric(phase_df["s_limit"], errors="coerce")
+
+    # pivot_table = phase_df.pivot(index="noise", columns="s_limit", values="f1")
+    # pivot_table = phase_df.pivot(index="noise", columns="s_limit", values="f1", aggfunc="mean")
+    pivot_table = phase_df.pivot_table(index="noise", columns="s_limit", values="f1", aggfunc="mean")
 
     plt.figure(figsize=(10, 8))
     sns.heatmap(pivot_table, annot=True, cmap="viridis", xticklabels=True, yticklabels=True)
 
     plt.savefig(os.path.join(run_dir, "phase.png"), dpi=300)
     plt.close()
-
-# def generate_phase_diagram(model, config, run_dir, data, noise_range, squeezing_range):
-#     X_test, y_test = data["test"]
-
-#     results = []
-#     for noise in noise_range:
-#         for s_limit in squeezing_range:
-#             #update config
-#             config.noise = noise
-#             config.max_squeezing = s_limit
-
-#             #run a quick validation epoch
-#             f1 = run_minimal_val(model, X_test, y_test, config)
-#             results.append({'noise': noise, 's_limit': s_limit, 'f1': f1})
-
-#     phase_df = pd.DataFrame(results)
-#     pivot_table = phase_df.pivot(index='noise', columns = 's_limit', values="f1")
-
-#     plt.figure(figsize=(10, 8))
-#     sns.heatmap(pivot_table, annot=True, cmap='viridis', xticklabels=True, yticklabels=True)
-#     plt.savefig(os.path.join(run_dir, "phase.png"), dpi=300)
-#     plt.close()
 
 def plot_fidelity_matrix(f_matrix, run_dir):
     plt.figure(figsize=(10,8))
@@ -54,17 +87,44 @@ def plot_fidelity_matrix(f_matrix, run_dir):
     plt.savefig(os.path.join(run_dir, "fidelity.png"), dpi=300)
     plt.close()
 
-# def plot_mode_wigner(mu, cov, mode_idx, run_dir):
-def plot_mode_wigner(mu, cov, mode_idx, save_path):
-    #extract 2d mean and 2x2 cov for specific mode
-    # m = mu[2*mode_idx : 2*mode_idx+2].detach().numpy()
-    m = mu[2*mode_idx : 2*mode_idx+2].detach().cpu().numpy()
-    # v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().numpy()
-    v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().cpu().numpy()
+# # def plot_mode_wigner(mu, cov, mode_idx, run_dir):
+# def plot_mode_wigner(mu, cov, mode_idx, save_path):
+#     #extract 2d mean and 2x2 cov for specific mode
+#     # m = mu[2*mode_idx : 2*mode_idx+2].detach().numpy()
+#     m = mu[2*mode_idx : 2*mode_idx+2].detach().cpu().numpy()
+#     # v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().numpy()
+#     v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().cpu().numpy()
 
-    #create grid
-    x, y = np.mgrid[-5:5:.05, -5:5:0.05]
-    pos = np.dstack((x, y))
+#     #create grid
+#     x, y = np.mgrid[-5:5:.05, -5:5:0.05]
+#     pos = np.dstack((x, y))
+#     rv = multivariate_normal(m, v, allow_singular=True)
+
+#     plt.figure(figsize=(6, 5))
+#     plt.contourf(x, y, rv.pdf(pos), cmap='viridis')
+#     plt.xlabel("X (Position)")
+#     plt.ylabel("P (Momentum)")
+#     plt.colorbar(label="Wigner quasi-probability")
+#     plt.savefig(os.path.join(save_path), dpi=300)
+#     plt.close()
+
+
+def plot_mode_wigner(mu, cov, mode_idx, save_path):
+    m = mu[2*mode_idx: 2*mode_idx+2].detach().cpu().numpy()
+    v = cov[2*mode_idx: 2*mode_idx+2, 2*mode_idx: 2*mode_idx+2].detach().cpu().numpy()
+
+    #dynamic grid: center plot on the state
+    #look 5 standard deviations around the mean
+
+    std_x = np.sqrt(v[0,0])
+    std_p = np.sqrt(v[1,1])
+
+    #expand view to always see the blob
+    limit_x = max(5, abs(m[0]) + 3*std_x)
+    limit_p = max(5, abs(m[1]) + 3*std_p)
+
+    x, y = np.mgrid[-limit_x:limit_x:.1, -limit_p:limit_p:.1]
+    pos = np.dstack((x,y))
     rv = multivariate_normal(m, v, allow_singular=True)
 
     plt.figure(figsize=(6, 5))
@@ -74,7 +134,6 @@ def plot_mode_wigner(mu, cov, mode_idx, save_path):
     plt.colorbar(label="Wigner quasi-probability")
     plt.savefig(os.path.join(save_path), dpi=300)
     plt.close()
-
 
     
 def plot_curves(values, name, run_dir):

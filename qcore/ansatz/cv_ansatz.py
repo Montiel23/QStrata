@@ -20,14 +20,15 @@ class GaussianVariationalAnsatz(nn.Module):
         #trainable parameters for the Gaussian manifold
         # self.squeezing_r = nn.Parameter(torch.randn(depth, n_modes) * 0.1)
 
-        # self.squeezing_r = nn.Parameter(torch.randn(depth, n_modes) * 0.01)
-        self.squeezing_r = nn.Parameter(torch.randn(depth, n_modes) * 0.1)
+        self.squeezing_r = nn.Parameter(torch.randn(depth, n_modes) * 0.01)
+        # self.squeezing_r = nn.Parameter(torch.randn(depth, n_modes) * 0.1)
 
 
         # self.bs_theta = nn.Parameter(torch.randn(depth, n_modes) * 0.1)
         # self.rot_phi = nn.Parameter(torch.randn(depth, n_modes) * 0.1)
 
-        self.bs_theta = nn.Parameter(torch.randn(depth, n_modes) * 0.2)
+        # self.bs_theta = nn.Parameter(torch.randn(depth, n_modes) * 0.2)
+        self.bs_theta = nn.Parameter(torch.randn(depth, n_modes) * 0.01)
         self.rot_phi = nn.Parameter(torch.randn(depth, n_modes) * 0.2)
 
 
@@ -69,16 +70,6 @@ class GaussianVariationalAnsatz(nn.Module):
                 mu, cov = backend.apply_symplectic(mu, cov, R)
 
 
-
-            # for i in range(self.n_modes - 1):
-            #     #phase shift
-            #     R = get_rotation_matrix(self.n_modes, i, self.rot_phi[d, i])
-            #     mu, cov = backend.apply_symplectic(mu, cov, R)
-            #     #mixing
-            #     BS = get_beamsplitter_matrix(self.n_modes, i, i+1, self.bs_theta[d, i])
-            #     mu, cov = backend.apply_symplectic(mu, cov, BS)
-
-
             for i in range(self.n_modes):
                 m1, m2 = i, (i+1) % self.n_modes
 
@@ -92,48 +83,3 @@ class GaussianVariationalAnsatz(nn.Module):
 
 
         return mu, cov
-
-        #     for i in range(self.n_modes):
-        #         m1 = i
-        #         m2 = (i + 1) % self.n_modes
-
-        #         #sort indices 
-        #         idx_a, idx_b = (m1, m2) if m1 < m2 else (m2, m1)
-
-        #         #use all n_modes of theta
-        #         BS = get_beamsplitter_matrix(self.n_modes, idx_a, idx_b, self.bs_theta[d, i])
-        #         mu, cov = backend.apply_symplectic(mu, cov, BS)
-
-
-        # return mu, cov
-
-
-            # for i in range(self.n_modes - 1):
-            #     #phase shift
-            #     R = get_rotation_matrix(self.n_modes, i, self.rot_phi[d, i])
-            #     mu, cov = backend.apply_symplectic(mu, cov, R)
-            #     #mixing
-            #     BS = get_beamsplitter_matrix(self.n_modes, i, i+1, self.bs_theta[d,i])
-            #     mu, cov = backend.apply_symplectic(mu, cov, BS)
-
-
-            # for i in range(self.n_modes):
-            #     #phase shift
-            #     R = get_rotation_matrix(self.n_modes, i, self.rot_phi[d, i])
-            #     mu, cov = backend.apply_symplectic(mu, cov, R)
-
-            #     m1 = i
-            #     m2 = (i+1) % self.n_modes
-
-            #     #ensure indices are in ascending order if symplectic library requires it
-            #     idx1, idx2 = (m1, m2) if m1 < m2 else (m2, m1)
-
-            #     #mixing to connect last mode to the first
-            #     # target_mode = (i + 1) % self.n_modes
-
-            #     #mixing
-            #     BS = get_beamsplitter_matrix(self.n_modes, idx1, idx2, self.bs_theta[d, i])
-            #     # BS = get_beamsplitter_matrix(self.n_modes, i, target_mode, self.bs_theta[d,i])
-            #     mu, cov = backend.apply_symplectic(mu, cov, BS)
-
-        # return mu, cov

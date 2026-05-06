@@ -267,14 +267,26 @@ class CV2DClassifier(nn.Module):
         self.gain = nn.Parameter(torch.ones(n_classes))
         self.bias = nn.Parameter(torch.zeros(n_classes))
 
-    def _encode_and_evolve(self, sample):
-
+    def _encode_and_evolve(self, sample, target_class=None):
         #ensure sample is a tensor to avoid the numpy error
         if not isinstance(sample, torch.Tensor):
             sample = torch.tensor(sample, dtype=torch.float32)
 
-        #feature engineering block
+        # #dynamic scale mapping
+        # snr_boosts = {
+        #     2: 2.0,
+        #     5: 2.5,
+        #     7: 1.5,
+        #     8: 3.0
+        # }
 
+        # #default boost for easy classes
+        # current_boost = 1.0
+
+        # if target_class is not None:
+        #     current_boost = snr_boosts.get(target_class.item(), 1.0)
+
+        #feature engineering block
         X_feat = torch.tanh(sample) * 3.0
 
         for i in range(X_feat.shape[-1]):
@@ -291,6 +303,7 @@ class CV2DClassifier(nn.Module):
 
         for i in range(self.n_modes):
             val = (sample[i].item() * self.encoding_multiplier) / np.sqrt(2 * self.hbar)
+            # val = (X_feat[i].item() * self.encoding_multiplier) / np.sqrt(2 * self.hbar)
 
             angle = i * np.pi / self.n_modes
 
@@ -311,11 +324,14 @@ class CV2DClassifier(nn.Module):
         return mu_out, cov_out
     
 
-    def forward(self, x):
+    def forward(self, x, y=None):
         if x.ndim == 1: x = x.unsqueeze(0)
         batch_logits = []
 
         for sample in x:
+        # for idx, sample in enumerate(x):
+            # target = y[idx] if y is not None else None
+            # mu, cov = self._encode_and_evolve(sample, target_class=target)
             mu, cov = self._encode_and_evolve(sample)
 
             #heterodyne readout: X and P for every mode

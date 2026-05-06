@@ -124,6 +124,7 @@ def train_cv_medmnist(config, data, run_dir):
             optimizer.zero_grad()
 
             logits = model(batch_x)
+            # logits = model(batch_x, y=batch_y)
             loss = criterion(logits, batch_y)
 
             # backward

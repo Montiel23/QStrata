@@ -12,6 +12,17 @@ from sklearn.preprocessing import StandardScaler, label_binarize
 from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, PrecisionRecallDisplay
 from scipy.stats import multivariate_normal
 
+# global paper formatting
+plt.rcParams.update({
+    'font.size': 16,
+    'axes.titlesize': 20,
+    'axes.labelsize': 18,
+    'xtick.labelsize': 16,
+    'ytick.labelsize': 16,
+    'legend.fontsize': 14,
+    'figure.titlesize': 20
+})
+
 
 def diagnostic_pca_boxplot(X_pca, y_labels, run_dir, name=None):
     "X_pca np array (samples, pca_components)"
@@ -33,7 +44,7 @@ def diagnostic_pca_boxplot(X_pca, y_labels, run_dir, name=None):
     plt.savefig(os.path.join(run_dir, f"pca_class_separation_{name}.png"), dpi=300)
     plt.close()
 
-def plot_class_distribution(data_dict, run_dir):
+def plot_class_distribution(data_dict, run_dir, class_names=None):
     n_classes = data_dict["n_classes"]
     labels_train = data_dict["train"][1]
     labels_val = data_dict["val"][1]
@@ -48,13 +59,17 @@ def plot_class_distribution(data_dict, run_dir):
     width = 0.25
 
     plt.figure(figsize=(12, 6))
-    plt.bar(x - width, train_counts, width, label="Train", color="#1f77b4")
-    plt.bar(x, val_counts, width, label="val", color="#ff7f0e")
-    plt.bar(x + width, test_counts, width, label="Test", color="#2ca02c")
+
+    plt.bar(x - width, train_counts, width, label=f"Train (n={sum(train_counts)})", color="#1f77b4")
+    plt.bar(x, val_counts, width, label=f"Val (n={sum(val_counts)})", color="#ff7f0e")
+    plt.bar(x + width, test_counts, width, label=f"Test (n={sum(test_counts)})", color="#2ca02c")
 
     plt.xlabel("Class ID")
     plt.ylabel("Number of samples")
-    plt.xticks(x)
+    if class_names:
+        plt.xticks(x, class_names, rotation=45, ha='right')
+    else:
+        plt.xticks(x)
     plt.legend()
     plt.grid(axis='y', linestyle="--", alpha=0.7)
 
@@ -81,33 +96,11 @@ def generate_phase_diagram(results_list, run_dir):
 
 def plot_fidelity_matrix(f_matrix, run_dir):
     plt.figure(figsize=(10,8))
-    sns.heatmap(f_matrix, annot=True, cmap='viridis', xticklabels=True, yticklabels=True)
+    sns.heatmap(f_matrix, fmt=".2f", annot=True, cmap='viridis', xticklabels=True, yticklabels=True)
     plt.xlabel("Class ID")
     plt.ylabel("Class ID")
     plt.savefig(os.path.join(run_dir, "fidelity.png"), dpi=300)
     plt.close()
-
-# # def plot_mode_wigner(mu, cov, mode_idx, run_dir):
-# def plot_mode_wigner(mu, cov, mode_idx, save_path):
-#     #extract 2d mean and 2x2 cov for specific mode
-#     # m = mu[2*mode_idx : 2*mode_idx+2].detach().numpy()
-#     m = mu[2*mode_idx : 2*mode_idx+2].detach().cpu().numpy()
-#     # v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().numpy()
-#     v = cov[2*mode_idx : 2*mode_idx+2, 2*mode_idx : 2*mode_idx+2].detach().cpu().numpy()
-
-#     #create grid
-#     x, y = np.mgrid[-5:5:.05, -5:5:0.05]
-#     pos = np.dstack((x, y))
-#     rv = multivariate_normal(m, v, allow_singular=True)
-
-#     plt.figure(figsize=(6, 5))
-#     plt.contourf(x, y, rv.pdf(pos), cmap='viridis')
-#     plt.xlabel("X (Position)")
-#     plt.ylabel("P (Momentum)")
-#     plt.colorbar(label="Wigner quasi-probability")
-#     plt.savefig(os.path.join(save_path), dpi=300)
-#     plt.close()
-
 
 def plot_mode_wigner(mu, cov, mode_idx, save_path):
     m = mu[2*mode_idx: 2*mode_idx+2].detach().cpu().numpy()
@@ -127,11 +120,20 @@ def plot_mode_wigner(mu, cov, mode_idx, save_path):
     pos = np.dstack((x,y))
     rv = multivariate_normal(m, v, allow_singular=True)
 
+
+
     plt.figure(figsize=(6, 5))
-    plt.contourf(x, y, rv.pdf(pos), cmap='viridis')
+    cf = plt.contourf(x, y, rv.pdf(pos), cmap='viridis')
     plt.xlabel("X (Position)")
     plt.ylabel("P (Momentum)")
-    plt.colorbar(label="Wigner quasi-probability")
+
+    cbar = plt.colorbar(cf)
+    cbar.ax.tick_params()
+    cbar.set_label("Wigner quasi-probability")
+
+    plt.tight_layout()
+
+    # plt.colorbar(label="Wigner quasi-probability")
     plt.savefig(os.path.join(save_path), dpi=300)
     plt.close()
 
@@ -192,7 +194,7 @@ def plot_inference_report_multiclass(y_true, y_logits, run_dir, n_classes):
     ConfusionMatrixDisplay.from_predictions(
         y_true, y_preds, ax=ax[0], cmap="Blues", colorbar=False
     )
-    ax[0].set_title("Confusion Matrix")
+    # ax[0].set_title("Confusion Matrix")
 
     # 2. Multi-class ROC Curve (One-vs-Rest)
     # We binarize the output to plot a curve for each class
@@ -200,27 +202,65 @@ def plot_inference_report_multiclass(y_true, y_logits, run_dir, n_classes):
     
     # If it's binary, label_binarize returns (N, 1), we need (N, 2) for multi-label logic
     if n_classes == 2:
-        y_true_bin = np.hstack((1 - y_true_bin, y_true_bin))
-
-    for i in range(n_classes):
         RocCurveDisplay.from_predictions(
-            y_true_bin[:, i], 
-            y_probs[:, i], 
-            ax=ax[1], 
-            name=f"Class {i}"
+            y_true, y_probs[:, 1], ax=ax[1],
         )
-    ax[1].plot([0, 1], [0, 1], "k--")
-    ax[1].set_title("Multi-class ROC")
 
-    # 3. Multi-class Precision-Recall Curve
-    for i in range(n_classes):
+
         PrecisionRecallDisplay.from_predictions(
-            y_true_bin[:, i], 
-            y_probs[:, i], 
-            ax=ax[2], 
-            name=f"Class {i}"
+            y_true, y_probs[:, 1], ax=ax[2],
         )
-    ax[2].set_title("Multi-class Precision-Recall")
+
+        # ax[1].set_title("ROC Curve")
+        # ax[2].set_title("Precision-Recall Curve")
+
+        # Override axis labels to remove "(Positive label: 1)"
+        ax[1].set_xlabel("False Positive Rate")
+        ax[1].set_ylabel("True Positive Rate")
+        ax[2].set_xlabel("Recall")
+        ax[2].set_ylabel("Precision")
+
+
+        prevalence = np.mean(y_true)
+        ax[2].axhline(y=prevalence, color='r', linestyle='--', label=f'Baseline ({prevalence:.2f})')
+        ax[2].legend()
+        # y_true_bin = np.hstack((1 - y_true_bin, y_true_bin))
+
+    else:
+        for i in range(n_classes):
+            RocCurveDisplay.from_predictions(
+                y_true_bin[:, i], 
+                y_probs[:, i], 
+                ax=ax[1], 
+                # name=f"Class {i}"
+            )
+        ax[1].plot([0, 1], [0, 1], "k--")
+        # ax[1].set_title("Multi-class ROC")
+
+        # 3. Multi-class Precision-Recall Curve
+        for i in range(n_classes):
+            PrecisionRecallDisplay.from_predictions(
+                y_true_bin[:, i], 
+                y_probs[:, i], 
+                ax=ax[2], 
+                # name=f"Class {i}"
+            )
+        # ax[2].set_title("Multi-class Precision-Recall")
+
+        # Override axis labels to remove "(Positive label: 1)"
+        ax[1].set_xlabel("False Positive Rate")
+        ax[1].set_ylabel("True Positive Rate")
+        ax[2].set_xlabel("Recall")
+        ax[2].set_ylabel("Precision")
+
+
+        # prevalence = np.mean(y_true)
+        # ax[2].axhline(y=prevalence, color='r', linestyle='--', label=f'Baseline ({prevalence:.2f})')
+        ax[2].legend()
+
+
+    for a in ax:
+        a.tick_params(axis='both', which='major')
 
     plt.tight_layout()
     plt.savefig(os.path.join(run_dir, "inference_report.png"), dpi=300)
@@ -277,7 +317,7 @@ def analyze_pca(data, n_components_list=[2, 4, 8, 16, 32], run_dir="results"):
     plt.axhline(y=0.9, color='r', linestyle='--', label='90% Information')
     
     # Highlight your current n_qubits (assuming it's the first in the list or usually 4)
-    plt.axvline(x=4, color='g', linestyle=':', label='Current Qubit Limit')
+    plt.axvline(x=4, color='g', linestyle=':', label='Current Qumode Limit')
     
     plt.xlabel("Number of Principal Components")
     plt.ylabel("Cumulative Explained Variance")

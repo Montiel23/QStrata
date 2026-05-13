@@ -5,14 +5,21 @@ import json
 from experiments.metrics import compute_metrics, calculate_purity, compute_gaussian_fidelity, analyze_state_separation
 from experiments.plots import plot_inference_report_multiclass, plot_mode_wigner, plot_fidelity_matrix
 
-def test(model, data, run_dir, hbar=2.0):
+def test(model, data, run_dir, config, hbar=2.0):
     model.eval()
     X_test, y_test = data["test"]
     n_classes = data["n_classes"]
 
+    readout = config["readout"]
+
     test_conf_matrix = torch.zeros((n_classes, n_classes), dtype=torch.int32)
     class_purity = {c: [] for c in range(n_classes)}
     class_snr = {c: [] for c in range(n_classes)}
+
+    #state accumulators for centroids
+
+    class_mus = {c: [] for c in range(n_classes)}
+    class_covs = {c: [] for c in range(n_classes)}
 
 
     wigner_samples = {}
@@ -28,7 +35,8 @@ def test(model, data, run_dir, hbar=2.0):
     with torch.no_grad():
         for i in range(len(X_test)):
             x_input = torch.tensor(X_test[i], dtype=torch.float32).unsqueeze(0)
-            logits = model(x_input)
+            # logits = model(x_input)
+            logits = model(x_input, readout_type=readout)
             # logits = model(X_test[i], dtype=torch.float32)
 
             pred = torch.argmax(logits).item()
@@ -37,6 +45,10 @@ def test(model, data, run_dir, hbar=2.0):
 
             #physics audit
             mu, cov = model.get_state_for_sample(X_test[i])
+
+            #store centroids (even is misclassified)
+            class_mus[target].append(mu)
+            class_covs[target].append(cov)
 
             test_results["mus"].append(mu.detach().cpu().numpy().flatten())
             test_results["covs"].append(cov.detach().cpu().numpy())
@@ -50,9 +62,9 @@ def test(model, data, run_dir, hbar=2.0):
             snr = (mu[0]**2) / (cov[0,0] + 0.05)
             class_snr[target].append(snr.item())
 
-            #store first correctly classified sample for wigner plotting
-            if pred == target and target not in wigner_samples:
-                wigner_samples[target] = (mu.clone(), cov.clone())
+            # #store first correctly classified sample for wigner plotting
+            # if pred == target and target not in wigner_samples:
+            #     wigner_samples[target] = (mu.clone(), cov.clone())
 
             test_conf_matrix[target, pred] += 1
             # all_logits.append(logits.numpy())
@@ -63,9 +75,25 @@ def test(model, data, run_dir, hbar=2.0):
     # generate wigner plots
     wigner_dirs = os.path.join(run_dir, "wigners")
     os.makedirs(wigner_dirs, exist_ok=True)
-    for cls_id, (mu_w, cov_w) in wigner_samples.items():
-        plot_mode_wigner(mu_w, cov_w, mode_idx=0,
-                         save_path=os.path.join(wigner_dirs, f"class_{cls_id}_wigner.png"))
+
+    for cls_id in range(n_classes):
+        if class_mus[cls_id]:
+            # compute average state for the class to ensure every ID is represent
+            avg_mu = torch.stack(class_mus[cls_id]).mean(dim=0)
+            avg_cov = torch.stack(class_covs[cls_id]).mean(dim=0)
+
+            # use updated function for larger labels/fonts
+            plot_mode_wigner(avg_mu, avg_cov, mode_idx=0, save_path=os.path.join(wigner_dirs, f"class_{cls_id}_wigner.png"))
+
+            print(f"Generated Wigner centroid for Class {cls_id}")
+
+    all_logits = np.array(all_logits)
+    all_targets = np.array(all_targets)
+
+
+    # for cls_id, (mu_w, cov_w) in wigner_samples.items():
+    #     plot_mode_wigner(mu_w, cov_w, mode_idx=0,
+    #                      save_path=os.path.join(wigner_dirs, f"class_{cls_id}_wigner.png"))
         
 
     #aggregate metrics
@@ -73,8 +101,8 @@ def test(model, data, run_dir, hbar=2.0):
     avg_snr = {f"class_{c}_snr_cv": 10 * np.log10(np.mean(s) + 1e-9) for c, s in class_snr.items() if s}
 
 
-    all_logits = np.array(all_logits)
-    all_targets = np.array(all_targets)
+    # all_logits = np.array(all_logits)
+    # all_targets = np.array(all_targets)
 
     plot_inference_report_multiclass(all_targets, all_logits, run_dir, n_classes)
 
@@ -121,6 +149,8 @@ def run_minimal_val(model, data, config, run_dir, noise_range, squeezing_range):
 
     X_test, y_test = data["test"]
 
+    readout = config["readout"]
+
     X_test_input = torch.tensor(X_test, dtype=torch.float32)
     y_test_input = torch.tensor(y_test, dtype=torch.long)
 
@@ -151,7 +181,8 @@ def run_minimal_val(model, data, config, run_dir, noise_range, squeezing_range):
             with torch.no_grad():
                 #loop through samples
                 for i in range(len(X_test_input)):
-                    logits = model(X_test_input[i].unsqueeze(0))
+                    # logits = model(X_test_input[i].unsqueeze(0))
+                    logits = model(X_test_input[i].unsqueeze(0), readout_type=readout)
                     pred = torch.argmax(logits, dim=1).item()
                     target = y_test_input[i].item()
 

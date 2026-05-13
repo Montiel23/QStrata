@@ -43,6 +43,20 @@ def compute_gaussian_fidelity(mu1, cov1, mu2, cov2, hbar=2.0):
     return np.clip(fidelity, 0.0, 1.0)
 
 
+def apply_quantum_scaling(subset):
+    X, y = subset
+    X_tensor = torch.tensor(X, dtype=torch.float32)
+
+    # non-linear squashing
+    X_trans = torch.tanh(X_tensor) * 3.0
+
+    #mean centering to the vacuum center
+    for i in range(X_trans.shape[-1]):
+        col = X_trans[..., i]
+        X_trans[..., i] = col - col.mean()
+
+    return X_trans.numpy(), y
+
 def analyze_state_separation(test_results, n_classes, hbar):
     fidelity_matrix = np.zeros((n_classes, n_classes))
 

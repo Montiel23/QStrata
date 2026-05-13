@@ -10,7 +10,7 @@ from experiments.train_cv_medmnist import train_cv_medmnist
 from experiments.test_cv_medmnist import test
 from experiments.plots import analyze_pca, plot_fidelity_matrix, generate_phase_diagram, plot_class_distribution, diagnostic_pca_boxplot
 from experiments.test_cv_medmnist import test, run_minimal_val
-from experiments.metrics import analyze_state_separation
+from experiments.metrics import analyze_state_separation, apply_quantum_scaling
 
 
 def main():
@@ -26,6 +26,7 @@ def main():
     parser.add_argument("--squeeze", type=float, default=0.5)
     parser.add_argument("--encoding", type=float, default=20.0)
     parser.add_argument("--batch", type=int, default=16)
+    parser.add_argument("--readout", type=str, default="dual_homodyne", choices=["homodyne", "dual_homodyne", "mlp"])
     args = parser.parse_args()
 
     #unique results directory
@@ -46,22 +47,30 @@ def main():
     print("Generating PCA analysis")
     analyze_pca(data, run_dir=run_dir)
 
-    X_train_pca, y_train_pca = data["train"]
+    # X_train_pca, y_train_pca = data["train"]
 
-    diagnostic_pca_boxplot(X_train_pca, y_train_pca, run_dir, name="pre-processing")
+    # diagnostic_pca_boxplot(X_train_pca, y_train_pca, run_dir, name="pre-processing")
 
-    X_train_tensor = torch.tensor(X_train_pca, dtype=torch.float32)
+    # X_train_tensor = torch.tensor(X_train_pca, dtype=torch.float32)
 
-    # X_transformed = torch.sign(X_train_tensor) * (X_train_tensor ** 2)
-    X_transformed = torch.tanh(X_train_tensor) * 3.0
+    # # X_transformed = torch.sign(X_train_tensor) * (X_train_tensor ** 2)
+    # X_transformed = torch.tanh(X_train_tensor) * 3.0
 
-    for i in range(X_transformed.shape[-1]):
-        col = X_transformed[..., i]
-        # X_transformed[..., i] = (col - col.mean()) / (col.std() + 1e-6)
-        X_transformed[..., i] = (col - col.mean()) / (1.0)
+    # for i in range(X_transformed.shape[-1]):
+    #     col = X_transformed[..., i]
+    #     # X_transformed[..., i] = (col - col.mean()) / (col.std() + 1e-6)
+    #     X_transformed[..., i] = (col - col.mean()) / (1.0)
+
+    # #apply scaling to all datasets
+    # print("Appying tanh transformation to all data subsets...")
+    # data["train"] = apply_quantum_scaling(data["train"])
+    # data["val"] = apply_quantum_scaling(data["val"])
+    # data["test"] = apply_quantum_scaling(data["test"])
+
+    # X_train_transformed, y_train_transformed = data["train"]
 
     # diagnostic_pca_boxplot(X_train_tensor.numpy(), y_train_pca, run_dir, name="post-processing")
-    diagnostic_pca_boxplot(X_transformed.numpy(), y_train_pca, run_dir, name="post-processing")
+    # diagnostic_pca_boxplot(X_train_transformed, y_train_transformed, run_dir, name="post-processing")
 
     #setup config dict
     config = {
@@ -75,6 +84,7 @@ def main():
         "squeeze": args.squeeze,
         "encoding": args.encoding,
         "batch_size": args.batch,
+        "readout": args.readout
         # "hbar": 2.0
     }
 
@@ -84,7 +94,7 @@ def main():
     model, metrics = train_cv_medmnist(config, data, run_dir)
 
     #test
-    metrics, test_results = test(model, data, run_dir)
+    metrics, test_results = test(model, data, run_dir, config)
 
     #test physics audit
     f_matrix = analyze_state_separation(test_results, model.n_classes, args.noise)

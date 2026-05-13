@@ -38,6 +38,7 @@ def train_cv_medmnist(config, data, run_dir):
     # hbar = config.get("hbar", 2.0)
     hbar = config["noise"]
     encoding = config["encoding"]
+    readout = config["readout"]
 
     X_train, y_train = data["train"]
 
@@ -123,7 +124,8 @@ def train_cv_medmnist(config, data, run_dir):
         for batch_x, batch_y in tqdm(train_loader, desc=f"Epoch {epoch+1}/{epochs} train"):
             optimizer.zero_grad()
 
-            logits = model(batch_x)
+            # logits = model(batch_x)
+            logits = model(batch_x, readout_type=readout)
             # logits = model(batch_x, y=batch_y)
             loss = criterion(logits, batch_y)
 
@@ -167,7 +169,7 @@ def train_cv_medmnist(config, data, run_dir):
 
         with torch.no_grad():
             for batch_x, batch_y in val_loader:
-                logits = model(batch_x)
+                logits = model(batch_x, readout_type=readout)
                 loss = criterion(logits, batch_y)
 
                 val_total_loss += loss.item() * batch_x.size(0)

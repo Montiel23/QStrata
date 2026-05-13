@@ -267,6 +267,16 @@ class CV2DClassifier(nn.Module):
         self.gain = nn.Parameter(torch.ones(n_classes))
         self.bias = nn.Parameter(torch.zeros(n_classes))
 
+        # readout control
+        self.readout_mode = "dual_homodyne"
+
+        #small MLP for hybrid experiments
+        self.mlp_head = nn.Sequential(
+            nn.Linear(2 * self.n_modes, 16),
+            nn.ReLU(),
+            nn.Linear(16, self.n_classes)
+        )
+
     def _encode_and_evolve(self, sample, target_class=None):
         #ensure sample is a tensor to avoid the numpy error
         if not isinstance(sample, torch.Tensor):
@@ -324,33 +334,70 @@ class CV2DClassifier(nn.Module):
         return mu_out, cov_out
     
 
-    def forward(self, x, y=None):
+    # def forward(self, x, y=None):
+    #     if x.ndim == 1: x = x.unsqueeze(0)
+    #     batch_logits = []
+
+    #     for sample in x:
+    #     # for idx, sample in enumerate(x):
+    #         # target = y[idx] if y is not None else None
+    #         # mu, cov = self._encode_and_evolve(sample, target_class=target)
+    #         mu, cov = self._encode_and_evolve(sample)
+
+    #         #heterodyne readout: X and P for every mode
+    #         readouts = []
+    #         for i in range(self.n_modes):
+    #             readouts.append(realistic_homodyne_readout(mu, cov, mode=i, angle=0.0))
+    #             readouts.append(realistic_homodyne_readout(mu, cov, mode=i, angle=np.pi/2))
+
+    #         #global intensity fallback
+    #         readouts.append(torch.norm(mu) / np.sqrt(self.hbar))
+
+    #         #dynamic padding/slicing
+    #         res_tensor = torch.stack(readouts)
+    #         if res_tensor.size(0) < self.n_classes:
+    #             pad = torch.zeros(self.n_classes - res_tensor.size(0), device=x.device)
+    #             res_tensor = torch.cat([res_tensor, pad])
+
+    #         logits = res_tensor[:self.n_classes]
+    #         batch_logits.append(logits * self.gain + self.bias)
+
+    #     return torch.stack(batch_logits)
+
+
+    def forward(self, x, readout_type="dual_homodyne"):
         if x.ndim == 1: x = x.unsqueeze(0)
         batch_logits = []
 
         for sample in x:
-        # for idx, sample in enumerate(x):
-            # target = y[idx] if y is not None else None
-            # mu, cov = self._encode_and_evolve(sample, target_class=target)
             mu, cov = self._encode_and_evolve(sample)
-
-            #heterodyne readout: X and P for every mode
             readouts = []
-            for i in range(self.n_modes):
-                readouts.append(realistic_homodyne_readout(mu, cov, mode=i, angle=0.0))
-                readouts.append(realistic_homodyne_readout(mu, cov, mode=i, angle=np.pi/2))
 
-            #global intensity fallback
-            readouts.append(torch.norm(mu) / np.sqrt(self.hbar))
+            if readout_type == "homodyne":
+                #realistic single-quadrature measurement
+                for i in range(self.n_modes):
+                    readouts.append(realistic_homodyne_readout(mu, cov, mode=i, angle=0.0))
 
-            #dynamic padding/slicing
+            elif readout_type == "dual_homodyne":
+                #your existing x and p measurement
+                for i in range(self.n_modes):
+                    readouts.append(realistic_homodyne_readout(mu, cov, mode=i, angle=0.0))
+                    readouts.append(realistic_homodyne_readout(mu, cov, mode=i, angle=np.pi/2))
+
+            #concatenate and handle dimensionality
             res_tensor = torch.stack(readouts)
-            if res_tensor.size(0) < self.n_classes:
-                pad = torch.zeros(self.n_classes - res_tensor.size(0), device=x.device)
-                res_tensor = torch.cat([res_tensor, pad])
 
-            logits = res_tensor[:self.n_classes]
-            batch_logits.append(logits * self.gain + self.bias)
+            #if testing with MLP, pass res_tensor through small hidden layer
+            if hasattr(self, 'mlp_readout'):
+                logits = self.mlp_readout(res_tensor)
+            else:
+                #standard linear readout (gain + bias)
+                if res_tensor.size(0) < self.n_classes:
+                    pad = torch.zeros(self.n_classes - res_tensor.size(0), device=x.device)
+                    res_tensor = torch.cat([res_tensor, pad])
+                logits = res_tensor[:self.n_classes] * self.gain + self.bias
+
+            batch_logits.append(logits)
 
         return torch.stack(batch_logits)
     

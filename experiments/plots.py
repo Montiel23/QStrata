@@ -232,7 +232,7 @@ def plot_inference_report_multiclass(y_true, y_logits, run_dir, n_classes):
                 y_true_bin[:, i], 
                 y_probs[:, i], 
                 ax=ax[1], 
-                # name=f"Class {i}"
+                name=f"Class {i}"
             )
         ax[1].plot([0, 1], [0, 1], "k--")
         # ax[1].set_title("Multi-class ROC")
@@ -243,7 +243,7 @@ def plot_inference_report_multiclass(y_true, y_logits, run_dir, n_classes):
                 y_true_bin[:, i], 
                 y_probs[:, i], 
                 ax=ax[2], 
-                # name=f"Class {i}"
+                name=f"Class {i}"
             )
         # ax[2].set_title("Multi-class Precision-Recall")
 

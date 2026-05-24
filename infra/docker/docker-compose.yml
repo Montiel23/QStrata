@@ -4,6 +4,9 @@ services:
       context: ../..
       dockerfile: infra/docker/Dockerfile
     container_name: qstrata-eda
+    env_file:
+      - path: ../../.env
+        required: false
     ports:
       - "8888:8888"
     volumes:

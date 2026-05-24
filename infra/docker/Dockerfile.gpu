@@ -18,6 +18,7 @@ RUN pip3 install --no-cache-dir \
         medmnist \
         jupyterlab \
         matplotlib \
-        scikit-learn
+        scikit-learn \
+        pyyaml
 
 WORKDIR /workspace

@@ -11,4 +11,10 @@ RUN pip3 install --no-cache-dir \
         torchvision==0.17.2+cu121 \
         --index-url https://download.pytorch.org/whl/cu121
 
+# Project dependencies for GPU training scripts
+# numpy<2 required: torch==2.2.2+cu121 was compiled against NumPy 1.x ABI
+RUN pip3 install --no-cache-dir \
+        "numpy<2" \
+        medmnist
+
 WORKDIR /workspace

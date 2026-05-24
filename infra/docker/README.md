@@ -2,12 +2,12 @@
 
 ### Build
 ```
-docker compose -f infra/docker/docker-compose.yml build
+docker compose --env-file .env -f infra/docker/docker-compose.yml build
 ```
 
 ### Start
 ```
-docker compose -f infra/docker/docker-compose.yml up
+docker compose --env-file .env -f infra/docker/docker-compose.yml up
 ```
 
 ### Open Jupyter
@@ -18,17 +18,26 @@ No token required (local research mode).
     Use localhost only. Do not expose port 8888 publicly.
 
 ### Dataset mount
-By default mounts `../../data` to `/data` inside the container.
-To use a custom dataset path:
+Copy `.env.example` to `.env` and set your dataset path:
 ```
-DATASET_PATH=/your/path/to/vindr-spinexr \
-  docker compose -f infra/docker/docker-compose.yml up
+cp .env.example .env
+# Edit .env: DATASET_PATH=/your/path/to/vindr-spinexr
 ```
 Inside the notebook use: `/data/vindr-spinexr/...`
 
+⚠️  Always use `--env-file .env` explicitly.
+    Docker Compose may not automatically resolve `.env` from the repo root
+    when using `-f infra/docker/docker-compose.yml`. Without `--env-file .env`,
+    `DATASET_PATH` will not be resolved and the mount falls back to `../../data`.
+
+### Config check
+```
+docker compose --env-file .env -f infra/docker/docker-compose.yml config
+```
+
 ### Stop
 ```
-docker compose -f infra/docker/docker-compose.yml down
+docker compose --env-file .env -f infra/docker/docker-compose.yml down
 ```
 
 ### Notes

@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Python packages — single layer, CPU-only, EDA scope
-# torch / QML / GPU dependencies are intentionally excluded
 RUN pip install --no-cache-dir \
         jupyterlab \
         notebook \
@@ -22,6 +21,12 @@ RUN pip install --no-cache-dir \
         pillow \
         tqdm \
         medmnist
+
+# CPU-only PyTorch — installed from the dedicated CPU wheel index (no CUDA)
+RUN pip install --no-cache-dir \
+        torch \
+        torchvision \
+        --index-url https://download.pytorch.org/whl/cpu
 
 WORKDIR /workspace
 

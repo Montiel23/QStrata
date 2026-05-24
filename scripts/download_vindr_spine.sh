@@ -167,9 +167,11 @@ else
         echo "Built aria2 URL list: $URL_COUNT files"
 
         # STEP 4 — Run aria2c
+        read -s -p "Password for user '$USERNAME': " PHYSIONET_PASSWORD
+        echo
         aria2c \
             --http-user="$USERNAME" \
-            --ask-password=true \
+            --http-passwd="$PHYSIONET_PASSWORD" \
             -x "$JOBS" \
             -s "$JOBS" \
             -j "$JOBS" \
@@ -177,7 +179,8 @@ else
             --auto-file-renaming=false \
             --allow-overwrite=false \
             -d . \
-            -i "$ARIA2_INPUT"
+            -i "$ARIA2_INPUT" || { unset PHYSIONET_PASSWORD; exit 1; }
+        unset PHYSIONET_PASSWORD
 
         # STEP 5 — Checksum note
         echo ""

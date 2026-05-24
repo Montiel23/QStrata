@@ -9,10 +9,13 @@ usage() {
     local exit_code="${1:-0}"
     cat <<EOF
 Usage: download_vindr_spine.sh --username USERNAME [--output_dir PATH]
+                                [--parallel] [--jobs N]
 
 Options:
   --username    PhysioNet username (required)
   --output_dir  Download destination (optional, overrides .env)
+  --parallel    Use aria2c parallel download mode (falls back to wget if unavailable)
+  --jobs N      Number of parallel connections for aria2c (default: 4)
 
 Prerequisites:
   - PhysioNet credentialed account
@@ -25,6 +28,8 @@ EOF
 # ── Parse args ────────────────────────────────────────────────────────────────
 USERNAME=""
 OUTPUT_DIR_ARG=""
+PARALLEL=false
+JOBS=4
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -37,6 +42,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --output_dir)
             OUTPUT_DIR_ARG="$2"
+            shift 2
+            ;;
+        --parallel)
+            PARALLEL=true
+            shift
+            ;;
+        --jobs)
+            JOBS="$2"
             shift 2
             ;;
         *)
@@ -96,12 +109,82 @@ mkdir -p "$OUTPUT_DIR"
 # ── Download ──────────────────────────────────────────────────────────────────
 cd "$OUTPUT_DIR"
 
-wget -r -N -c -np \
-    --user "$USERNAME" \
-    --ask-password \
-    --show-progress \
-    --progress=bar:force:noscroll \
-    https://physionet.org/files/vindr-spinexr/1.0.0/
+_wget_sequential() {
+    wget -r -N -c -np \
+        --user "$USERNAME" \
+        --ask-password \
+        --show-progress \
+        --progress=bar:force:noscroll \
+        https://physionet.org/files/vindr-spinexr/1.0.0/
+}
+
+if [[ "$PARALLEL" == false ]]; then
+    # ── Sequential wget (default) ─────────────────────────────────────────────
+    _wget_sequential
+
+else
+    # ── Parallel aria2c mode ──────────────────────────────────────────────────
+
+    # STEP 1 — Check aria2c is installed
+    if ! command -v aria2c &> /dev/null; then
+        echo "[WARN] aria2c not found. Install with: sudo apt install aria2"
+        echo "[INFO] Falling back to wget sequential download."
+        _wget_sequential
+    else
+        # STEP 2 — Ensure SHA256SUMS.txt is available
+        SUMS_FILE=$(find "$OUTPUT_DIR" -name "SHA256SUMS.txt" | head -n 1)
+        if [[ -n "$SUMS_FILE" ]]; then
+            echo "[INFO] Reusing existing SHA256SUMS.txt: $SUMS_FILE"
+        else
+            echo "[INFO] Downloading SHA256SUMS.txt ..."
+            wget -N -c \
+                --user "$USERNAME" \
+                --ask-password \
+                --show-progress \
+                --progress=bar:force:noscroll \
+                -P "$OUTPUT_DIR" \
+                https://physionet.org/files/vindr-spinexr/1.0.0/SHA256SUMS.txt
+            SUMS_FILE="$OUTPUT_DIR/SHA256SUMS.txt"
+        fi
+
+        # STEP 3 — Build aria2 input file from SHA256SUMS.txt
+        # Format: <hash>  <path/to/file>
+        # aria2 input format:
+        #   https://…/<path>
+        #     out=<path>
+        ARIA2_INPUT="$OUTPUT_DIR/urls_aria2.txt"
+        : > "$ARIA2_INPUT"   # truncate / create
+        while IFS= read -r line; do
+            # Skip blank lines and comment lines
+            [[ -z "$line" || "$line" == \#* ]] && continue
+            FILE_PATH=$(echo "$line" | awk '{print $2}')
+            [[ -z "$FILE_PATH" ]] && continue
+            printf 'https://physionet.org/files/vindr-spinexr/1.0.0/%s\n' "$FILE_PATH" >> "$ARIA2_INPUT"
+            printf '  out=%s\n' "$FILE_PATH" >> "$ARIA2_INPUT"
+        done < "$SUMS_FILE"
+
+        URL_COUNT=$(grep -c '^https://physionet.org/files/vindr-spinexr/1.0.0/' "$ARIA2_INPUT" || true)
+        echo "Built aria2 URL list: $URL_COUNT files"
+
+        # STEP 4 — Run aria2c
+        aria2c \
+            --http-user="$USERNAME" \
+            --ask-password=true \
+            -x "$JOBS" \
+            -s "$JOBS" \
+            -j "$JOBS" \
+            --continue=true \
+            --auto-file-renaming=false \
+            --allow-overwrite=false \
+            -d . \
+            -i "$ARIA2_INPUT"
+
+        # STEP 5 — Checksum note
+        echo ""
+        echo "Checksum file available: $OUTPUT_DIR/SHA256SUMS.txt"
+        echo "Full checksum validation can be added later."
+    fi
+fi
 
 # ── Post-download dataset root detection ──────────────────────────────────────
 # wget -r creates nested dirs (e.g. physionet.org/files/vindr-spinexr/1.0.0/)

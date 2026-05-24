@@ -2,14 +2,12 @@ import os
 import pandas as pd
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
-from sklearn.decomposition import PCA
 import cv2
 import pydicom
 
 class SpineCascadeDataset(Dataset):
-    def __init__(self, csv_file, img_dir, path_size=(28, 28), include_background=True):
+    def __init__(self, csv_file, img_dir, patch_size=(28, 28), include_background=True):
         """
         loader parsing multiclass annotations, variable slice channels,
         pairing ground-truth lesion boxes with random background control windows"
@@ -17,7 +15,7 @@ class SpineCascadeDataset(Dataset):
 
         raw_df = pd.read_csv(csv_file)
         self.img_dir = img_dir
-        self.patch_size = self.patch_size
+        self.patch_size = patch_size
         self.include_background = include_background
 
         #isolate lesion instances containing active bounding box coordinates
@@ -34,7 +32,7 @@ class SpineCascadeDataset(Dataset):
 
     def __len__(self):
         if self.include_background:
-            return len(self.bbox_annotations)
+            return len(self.bbox_annotations) * 2
         return len(self.bbox_annotations)
     
     def __getitem__(self, idx):
@@ -44,6 +42,7 @@ class SpineCascadeDataset(Dataset):
 
         dicom_path = os.path.join(self.img_dir, f"{row['image_id']}.dicom")
         if not os.path.exists(dicom_path):
+            print(f"[WARN] DICOM not found: {dicom_path} — returning zero patch")
             return torch.zeros(self.patch_size[0] * self.patch_size[1]), torch.tensor(0, dtype=torch.long)
         
         #load raw medical image vectors

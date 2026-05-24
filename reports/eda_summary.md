@@ -50,7 +50,7 @@
 | Missing DICOMs | 0/5 (0.0%) |
 | Invalid boxes (w/h <= 0) | 0 |
 | Zero-area crops | 0 |
-| Zero-patch rate | 0/20 (0.0%) |
+| Zero-patch rate | 0/10 (0.0%) |
 
 **Issues found:** NONE
 

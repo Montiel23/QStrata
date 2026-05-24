@@ -20,7 +20,8 @@ RUN pip install --no-cache-dir \
         opencv-python-headless \
         pydicom \
         pillow \
-        tqdm
+        tqdm \
+        medmnist
 
 WORKDIR /workspace
 

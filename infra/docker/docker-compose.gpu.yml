@@ -1,0 +1,16 @@
+services:
+  qstrata-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ../..:/workspace
+    working_dir: /workspace

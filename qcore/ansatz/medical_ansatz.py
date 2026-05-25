@@ -2,6 +2,7 @@ from qcore.circuit.circuit import Circuit
 from qcore.operators.dv.rotations import RX, RY, RZ, H
 from qcore.operators.dv.entanglers import CNOT
 import numpy as np
+import torch
 
 def get_ansatz_shape(n_qubits, depth):
     return (depth, 2, n_qubits, 3)
@@ -17,8 +18,7 @@ def medical_ansatz(x, theta, n_qubits, depth, alpha):
     for d in range(depth):
         # non-linear data reuploading
         for q in range(n_qubits):
-            val = np.arctan(x[q]) * alpha
-            # circuit.add(RY(torch.atan(x[q]) * alpha, q))
+            val = torch.atan(x[q]) * alpha   # Q5: torch.atan preserves autograd graph
             circuit.add(RY(val, q))
             circuit.add(RZ(x[q] * alpha, q))
 

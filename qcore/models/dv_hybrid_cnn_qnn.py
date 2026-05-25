@@ -15,13 +15,11 @@ Architecture:
 
 Trainable parameters: projection (516), theta (24), readout (34) = 574 total
 
-Known limitation: medical_ansatz uses np.arctan(x[q]) for data reuploading,
-which does not support PyTorch autograd on inputs that require_grad. To avoid
-a RuntimeError, projection output is detached before being passed to
-medical_ansatz. As a result, only theta and readout receive gradient updates;
-the projection layer is effectively a fixed random linear map in this baseline.
-This is documented and flagged for resolution in Q5 (replace np.arctan with
-torch.atan in the encoding path).
+Q5 update: medical_ansatz now uses torch.atan(x[q]) for data reuploading,
+restoring full differentiability through the encoding path. Projection output
+is no longer detached — gradients flow from loss through readout → quantum
+circuit → projection layer. All three trainable components (projection, theta,
+readout) now receive gradient updates.
 
 Do not modify any existing source files.
 """
@@ -134,12 +132,14 @@ class DVHybridCNNQNN(nn.Module):
         """
         Run one sample through the DV quantum circuit.
 
-        x_i must be detached (requires_grad=False) because medical_ansatz uses
-        np.arctan(x_i[q]) which does not support PyTorch autograd.
+        Q5: x_i may carry requires_grad=True. medical_ansatz now uses
+        torch.atan(x_i[q]) which preserves the PyTorch autograd graph,
+        enabling gradient flow from the circuit output back to x_i and
+        from there to the projection layer weights.
 
         Parameters
         ----------
-        x_i : (n_qubits,) tensor, detached
+        x_i : (n_qubits,) tensor — may have requires_grad=True
 
         Returns
         -------
@@ -174,14 +174,15 @@ class DVHybridCNNQNN(nn.Module):
         proj_out = self.proj(features)         # (B, n_qubits), requires_grad=True
 
         # ── Per-sample quantum loop ───────────────────────────────────────────
-        # proj_out is detached before medical_ansatz because np.arctan cannot
-        # handle tensors with requires_grad=True. This severs the gradient path
-        # from the projection layer; only theta and readout receive gradients.
+        # Q5: proj_out[i] is passed directly — no detach. medical_ansatz now
+        # uses torch.atan(x[q]) which preserves the autograd graph, enabling
+        # gradient flow from loss → readout → probs → quantum circuit →
+        # proj_out → proj.weight/bias (full end-to-end gradient path).
         probs_list: list[torch.Tensor] = []
         self._prob_sums = []
 
         for i in range(B):
-            x_i    = proj_out[i].detach()                 # (n_qubits,) — detached
+            x_i    = proj_out[i]                          # (n_qubits,) — grad enabled (Q5)
             probs_i = self._quantum_forward_single(x_i)   # (2^n_qubits,)
             probs_list.append(probs_i)
             self._prob_sums.append(probs_i.sum().item())

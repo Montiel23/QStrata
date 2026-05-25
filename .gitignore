@@ -23,3 +23,6 @@ old_experiments/
 *.jpg
 *.jpeg
 
+# Exported dataset files — never commit processed image data
+data/processed/
+

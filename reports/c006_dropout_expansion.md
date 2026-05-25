@@ -27,9 +27,9 @@ This controlled single-seed evaluation tests whether a small manual adjustment t
 
 | Candidate | Dropout | Params | Best val acc | Best epoch | Final train acc | Test acc\* | Mean epoch time (s) | Latency (ms/batch) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| C006-D020 | 0.20 | 9,870 | 91.79% | 6 | 91.95% | 86.38% | 0.61 | 0.761 |
-| C006-D030  ← baseline | 0.30 | 9,870 | 91.98% | 9 | 91.53% | 86.22% | 0.58 | 0.508 |
-| C006-D040 | 0.40 | 9,870 | 91.79% | 5 | 91.02% | 86.86% | 0.58 | 0.504 |
+| C006-D020 | 0.20 | 9,870 | 91.79% | 6 | 91.95% | 86.38% | 0.59 | 0.753 |
+| C006-D030  ← baseline | 0.30 | 9,870 | 91.98% | 9 | 91.53% | 86.22% | 0.55 | 0.464 |
+| C006-D040 | 0.40 | 9,870 | 91.79% | 5 | 91.02% | 86.86% | 0.55 | 0.474 |
 
 > \*Test accuracy is analysis only — not used as fitness signal or gate criterion.
 
@@ -37,7 +37,7 @@ This controlled single-seed evaluation tests whether a small manual adjustment t
 
 ## 5. Decision Gate
 
-**Baseline:** C006-D030 — best val acc 91.98%, latency 0.508 ms/batch
+**Baseline:** C006-D030 — best val acc 91.98%, latency 0.464 ms/batch
 
 | Candidate | val_acc within 0.5 pp of baseline OR better | params = baseline | latency delta ≤ 15% | training OK | Gate result |
 |---|---|---|---|---|---|

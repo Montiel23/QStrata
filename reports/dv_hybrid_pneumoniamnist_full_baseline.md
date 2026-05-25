@@ -289,7 +289,7 @@ only. Von Neumann entropy monitoring is deferred to a future slice when
 | Backbone | Random init | Pretrained C006-D040 | Pretrained C006-D040 | N/A (full model) |
 | Epochs trained | 3 | 3 | 30 | 10 |
 | Trainable params | 574 (58 effective) | 574 (all effective) | 574 (all effective) | 9,870 |
-| Majority-class collapse | YES | NO (TN=188) | YES (TN=186) | N/A |
+| Majority-class collapse | YES | NO / RESOLVED | NO / RESOLVED | N/A |
 
 Val acc gap Q7 → Q8 : **+0.20 pp**
 Val acc gap to classical anchor: **-0.20 pp**

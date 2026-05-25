@@ -1,0 +1,17 @@
+model:
+  block_type: depthwise_sep
+  conv_channels: [64, 128]
+  dropout: 0.3
+  use_batchnorm: true
+  pooling: adaptive_avg
+
+training:
+  epochs: 10
+  batch_size: 64
+  lr: 0.001
+  class_weights: true
+
+dataset:
+  name: pneumoniamnist
+  input_channels: 1
+  num_classes: 2

@@ -1,0 +1,17 @@
+services:
+  qstrata-eda:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: qstrata-eda
+    env_file:
+      - path: ../../.env
+        required: false
+    ports:
+      - "8888:8888"
+    volumes:
+      - ../..:/workspace
+      - ${DATASET_PATH:-../../data}:/data
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    working_dir: /workspace

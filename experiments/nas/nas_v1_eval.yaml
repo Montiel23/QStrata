@@ -1,0 +1,13 @@
+seed: 42
+
+candidates:
+  - id: C001
+    config_path: experiments/configs/binary_baseline.yaml
+  - id: C004
+    config_path: experiments/configs/binary_baseline_depthwise_sep.yaml
+  - id: C006
+    config_path: experiments/configs/binary_baseline_depthwise_sep_wide.yaml
+
+output:
+  markdown: reports/nas_v1_eval.md
+  csv: reports/nas_v1_eval.csv

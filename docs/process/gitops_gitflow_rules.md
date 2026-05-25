@@ -58,6 +58,44 @@ If any modified or untracked files remain after a slice completes its checkpoint
 
 ---
 
+## Simplified GitFlow Policy for R&D
+
+The following rules define the simplified branching model in effect for all R&D slice work after the `feature/data-understanding` hygiene checkpoint. They supersede any prior assumption that feature branches are mandatory.
+
+### Policy 1 — `develop` is the default active R&D branch
+
+All normal slice work is committed to `develop` after checkpoint validation. There is no requirement to create a feature branch for routine baby-step slices. `develop` is the canonical state of ongoing R&D work.
+
+### Policy 2 — `main`/`master` is reserved for stable snapshots only
+
+`main` and `master` are never the target of slice commits. They are updated only when a stable, reviewed snapshot or release is ready. Do not commit slice work directly to `main` or `master`.
+
+### Policy 3 — Feature branches are optional and reserved for isolated work
+
+Feature branches should be created only when the work is risky, long-running, likely to break existing functionality, or needs to be isolated from the main R&D stream while in progress. They are not required for every slice. If in doubt, commit to `develop`.
+
+### Policy 4 — Baby-step slices may commit directly to `develop`
+
+Any slice that passes checkpoint validation — clean working tree, correct output, all acceptance criteria PASS — may be committed directly to `develop` without an intermediate feature branch.
+
+### Policy 5 — Clean working tree discipline applies on every branch
+
+Regardless of which branch is active, the standard clean-tree rules apply: run `git status --short` before and after every slice, and do not begin a slice with an undocumented dirty working tree.
+
+### Policy 6 — Every slice must end with a commit or a documented no-commit decision
+
+This rule carries over from the mandatory rules above. It applies equally on `develop`, on feature branches, and on any other branch.
+
+### Policy 7 — Never push, merge, or switch branches without explicit human approval
+
+This rule is unchanged. No branch operation — including merging `develop` to `main`, merging a feature branch to `develop`, or switching to any branch — may occur without an explicit instruction or approval from the human architect.
+
+### Policy 8 — Stop and report immediately if a merge conflict occurs
+
+If any merge or rebase produces a conflict, stop immediately. Print the list of conflicting files. Do not attempt to resolve the conflict automatically. Do not modify any conflicting file. Wait for explicit human instruction before taking any further action.
+
+---
+
 ## Summary Table
 
 | Rule | Short form |

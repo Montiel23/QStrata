@@ -1,0 +1,4 @@
+candidate_id,block_type,conv_channels,params,best_val_acc,best_epoch,final_train_acc,test_acc_analysis_only,mean_epoch_time,latency_ms
+C001,standard,"[32, 64]",19138,92.5573,7,90.4630,86.5385,0.4786,0.5898
+C004,depthwise_sep,"[32, 64]",2894,91.4122,7,89.9533,87.6603,0.4444,0.6980
+C006,depthwise_sep,"[64, 128]",9870,91.9847,9,91.5251,86.2179,0.5665,0.5893

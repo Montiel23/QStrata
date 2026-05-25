@@ -30,8 +30,9 @@ from qcore.models.cnn import build_model
 CONFIGS_DIR = os.path.join(os.path.dirname(__file__), "..", "experiments", "configs")
 
 CONFIGS = [
-    ("standard",      "binary_baseline.yaml"),
-    ("depthwise_sep", "binary_baseline_depthwise_sep.yaml"),
+    ("standard",           "binary_baseline.yaml"),
+    ("depthwise_sep",      "binary_baseline_depthwise_sep.yaml"),
+    ("depthwise_sep_wide", "binary_baseline_depthwise_sep_wide.yaml"),
 ]
 
 
@@ -181,70 +182,83 @@ def run_benchmark(label: str, cfg_filename: str, device: str) -> dict:
 
 
 def print_table(results: list) -> None:
-    r0, r1 = results[0], results[1]
+    r0, r1, r2 = results[0], results[1], results[2]
 
     def fmt_pct(v):  return f"{v * 100:.2f}%"
     def fmt_f2(v):   return f"{v:.2f}"
     def fmt_int(v):  return str(v)
 
     rows = [
-        ("Params",                   fmt_int(r0["params"]),          fmt_int(r1["params"])),
-        ("Mean epoch time (s)",      fmt_f2(r0["mean_epoch_time"]),  fmt_f2(r1["mean_epoch_time"])),
-        ("Final train accuracy",     fmt_pct(r0["final_train_acc"]), fmt_pct(r1["final_train_acc"])),
-        ("Final val accuracy",       fmt_pct(r0["final_val_acc"]),   fmt_pct(r1["final_val_acc"])),
-        ("Test accuracy",            fmt_pct(r0["test_acc"]),        fmt_pct(r1["test_acc"])),
-        ("Mean latency (ms/batch)",  fmt_f2(r0["mean_latency_ms"]),  fmt_f2(r1["mean_latency_ms"])),
+        ("Params",                   fmt_int(r0["params"]),          fmt_int(r1["params"]),          fmt_int(r2["params"])),
+        ("Mean epoch time (s)",      fmt_f2(r0["mean_epoch_time"]),  fmt_f2(r1["mean_epoch_time"]),  fmt_f2(r2["mean_epoch_time"])),
+        ("Final train accuracy",     fmt_pct(r0["final_train_acc"]), fmt_pct(r1["final_train_acc"]), fmt_pct(r2["final_train_acc"])),
+        ("Final val accuracy",       fmt_pct(r0["final_val_acc"]),   fmt_pct(r1["final_val_acc"]),   fmt_pct(r2["final_val_acc"])),
+        ("Test accuracy",            fmt_pct(r0["test_acc"]),        fmt_pct(r1["test_acc"]),        fmt_pct(r2["test_acc"])),
+        ("Mean latency (ms/batch)",  fmt_f2(r0["mean_latency_ms"]),  fmt_f2(r1["mean_latency_ms"]),  fmt_f2(r2["mean_latency_ms"])),
     ]
 
     col0_w = max(len(row[0]) for row in rows) + 2
     col1_w = max(len(r0["label"]) + 2, max(len(row[1]) for row in rows) + 2, 13)
     col2_w = max(len(r1["label"]) + 2, max(len(row[2]) for row in rows) + 2, 15)
+    col3_w = max(len(r2["label"]) + 2, max(len(row[3]) for row in rows) + 2, 20)
 
-    header  = f"| {'Metric':<{col0_w}} | {r0['label']:>{col1_w}} | {r1['label']:>{col2_w}} |"
-    divider = f"|{'-' * (col0_w + 2)}|{'-' * (col1_w + 2)}:|{'-' * (col2_w + 2)}:|"
+    header  = (f"| {'Metric':<{col0_w}} | {r0['label']:>{col1_w}} | "
+               f"{r1['label']:>{col2_w}} | {r2['label']:>{col3_w}} |")
+    divider = (f"|{'-' * (col0_w + 2)}|{'-' * (col1_w + 2)}:|"
+               f"{'-' * (col2_w + 2)}:|{'-' * (col3_w + 2)}:|")
 
     print()
     print(header)
     print(divider)
-    for metric, v0, v1 in rows:
-        print(f"| {metric:<{col0_w}} | {v0:>{col1_w}} | {v1:>{col2_w}} |")
+    for metric, v0, v1, v2 in rows:
+        print(f"| {metric:<{col0_w}} | {v0:>{col1_w}} | {v1:>{col2_w}} | {v2:>{col3_w}} |")
     print()
 
 
 def print_checkpoint_decision(results: list) -> None:
-    r_std = results[0]
-    r_dw  = results[1]
+    r_std  = results[0]
+    r_wide = results[2]
 
-    acc_delta = (r_std["test_acc"] - r_dw["test_acc"]) * 100
-    param_ratio = r_std["params"] / r_dw["params"]
-    epoch_ratio = r_std["mean_epoch_time"] / r_dw["mean_epoch_time"]
+    acc_delta   = (r_std["test_acc"] - r_wide["test_acc"]) * 100
+    param_ratio = r_std["params"] / r_wide["params"]
+    lat_ratio   = r_wide["mean_latency_ms"] / r_std["mean_latency_ms"]
+    epoch_ratio = r_wide["mean_epoch_time"] / r_std["mean_epoch_time"]
 
-    within_tolerance = acc_delta <= 5.0
-    more_efficient   = param_ratio > 1.0 or epoch_ratio > 1.0
+    recovered        = acc_delta <= 5.0
+    param_efficient  = param_ratio > 1.0
+    latency_compet   = lat_ratio < 2.0 and epoch_ratio < 2.0
+    nas_candidate    = recovered and param_efficient
 
     print("=== Checkpoint Decision ===")
     print()
     print(
-        f"1. Accuracy within 3–5 pp of standard: "
-        + ("YES" if within_tolerance else "NO")
-        + f" — depthwise_sep test accuracy is {r_dw['test_acc']*100:.2f}% vs "
+        f"1. Wider depthwise recovered test accuracy within 3–5 pp of standard: "
+        + ("YES" if recovered else "NO")
+        + f" — depthwise_sep_wide test accuracy is {r_wide['test_acc']*100:.2f}% vs "
         + f"standard {r_std['test_acc']*100:.2f}% (delta = {acc_delta:+.2f} pp)."
     )
     print(
-        f"2. Efficiency improved: "
-        + ("YES" if more_efficient else "NO")
-        + f" — depthwise_sep has {r_dw['params']:,} params "
-        + f"({param_ratio:.1f}× fewer) and mean epoch time "
-        + f"{r_dw['mean_epoch_time']:.2f}s vs {r_std['mean_epoch_time']:.2f}s "
-        + f"({epoch_ratio:.2f}× ratio)."
+        f"2. Wider depthwise remained meaningfully more parameter-efficient than standard: "
+        + ("YES" if param_efficient else "NO")
+        + f" — depthwise_sep_wide has {r_wide['params']:,} params vs "
+        + f"standard {r_std['params']:,} ({param_ratio:.2f}× fewer)."
     )
     print(
-        f"3. NAS candidate: "
-        + ("YES" if (within_tolerance and more_efficient) else "CONDITIONAL")
-        + f" — depthwise_sep should remain a NAS search space candidate "
-        + ("if accuracy tolerance is acceptable for the target operating point."
-           if not within_tolerance else
-           "given its parameter efficiency advantage and acceptable accuracy.")
+        f"3. Wider depthwise remained competitive in latency and epoch time: "
+        + ("YES" if latency_compet else "NO")
+        + f" — mean latency {r_wide['mean_latency_ms']:.2f} ms/batch vs "
+        + f"standard {r_std['mean_latency_ms']:.2f} ms/batch ({lat_ratio:.2f}×); "
+        + f"mean epoch time {r_wide['mean_epoch_time']:.2f}s vs "
+        + f"{r_std['mean_epoch_time']:.2f}s ({epoch_ratio:.2f}×)."
+    )
+    print(
+        f"4. depthwise_sep should remain in the future NAS candidate space: "
+        + ("YES" if nas_candidate else "CONDITIONAL")
+        + (" — wider channels recovered accuracy within tolerance while retaining "
+           "parameter efficiency, making depthwise_sep a valid NAS candidate."
+           if nas_candidate else
+           " — accuracy gap versus standard exceeds 5 pp even at wider channels; "
+           "depthwise_sep may need further investigation before inclusion in NAS.")
     )
     print()
 

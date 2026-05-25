@@ -15,6 +15,7 @@ services:
       - "8889:8888"
     volumes:
       - ../..:/workspace
+      - /media/mike/Datasets/vindr-spinexr:/datasets/vindr-spinexr:ro
     working_dir: /workspace
     environment:
       - PYTHONPATH=/workspace

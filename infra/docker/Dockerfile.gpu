@@ -21,4 +21,10 @@ RUN pip3 install --no-cache-dir \
         scikit-learn \
         pyyaml
 
+# DICOM reading support for VinDr-SpineXR (JPEG 2000 compressed files)
+RUN pip3 install --no-cache-dir \
+        pydicom \
+        pylibjpeg \
+        pylibjpeg-openjpeg
+
 WORKDIR /workspace

@@ -71,11 +71,51 @@ Binary closure is complete only when both datasets have finished both model type
 | Q20 | VinDr-SpineXR DV Hybrid Pretrained-Backbone Feasibility | DONE |
 | Q21 | VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training | DONE |
 | Q22 | VinDr-SpineXR Approximate Trainable-Parameter-Matched Classical Control | COMPLETE |
-| Q23 | VinDr Classical vs DV Hybrid vs Tiny Classical Comparative Report | COMPLETE |
-| — | **VinDr binary phase** | **STATUS: CLOSED** |
+| Q23 | VinDr DV Binary Comparative Report | COMPLETE |
+| — | **VinDr DV binary benchmarking** | **CLOSED** |
+| Q24 | Roadmap Realignment for CV Binary Quantum Phase | COMPLETE |
+| Q25 | Continuous-Variable Binary Feasibility Design | PLANNED |
+| Q26 | Continuous-Variable Binary Smoke Test | PLANNED |
+| Q27 | Continuous-Variable Binary Full Training | PLANNED |
+| Q28 | DV vs CV Binary Comparative Report | PLANNED |
+| Q29 | Binary Quantum Release Tagging | PLANNED |
+| — | **VinDr CV binary benchmarking** | **PENDING** |
+| — | **Overall VinDr binary quantum benchmarking** | **IN PROGRESS** |
 | P21 | PneumoniaMNIST Classical vs DV Hybrid Comparative Report | TODO |
 | R-FINAL | Global Binary Benchmark Technical Summary | TODO |
-| — | **NEXT PHASE — Multiclass benchmarking** | **STATUS: PENDING ROADMAP DECISION** |
+| — | **NEXT PHASE — Multiclass benchmarking** | **BLOCKED until Q29 complete** |
+
+**Slice descriptions — CV binary phase:**
+
+- **Q24** — Roadmap Realignment for CV Binary Quantum Phase. Corrects roadmap to reflect DV binary closure only; inserts CV binary phase Q25–Q29 before multiclass. Documentation only.
+- **Q25** — Continuous-Variable Binary Feasibility Design. Design CV binary experiment architecture for VinDr-SpineXR. Covers Gaussian ansatz, quadrature outputs, moment-based readout, symplectic formalism, and QStrata-only integration. No training.
+- **Q26** — Continuous-Variable Binary Smoke Test. Validate minimal CV pipeline with forward pass, gradient flow, numerical stability, probability sanity, and optimizer update verification.
+- **Q27** — Continuous-Variable Binary Full Training. Train CV binary hybrid benchmark on VinDr-SpineXR using validated CV pipeline.
+- **Q28** — DV vs CV Binary Comparative Report. Scientific comparison of DV hybrid, CV hybrid, and classical controls across VinDr binary benchmarks.
+- **Q29** — Binary Quantum Release Tagging. Create binary benchmark release tags after DV and CV binary phases are both complete.
+
+---
+
+## 3b. Tagging Strategy
+
+| Tag | Trigger condition |
+|---|---|
+| `vindr-binary-dv-v1` | After Q23 — VinDr DV binary phase closure |
+| `vindr-binary-cv-v1` | After Q28 — VinDr CV binary phase closure |
+| `vindr-binary-complete-v1` | After Q29 — full VinDr binary quantum closure |
+
+Tags must not be created until all required slices in each phase are complete.
+
+---
+
+## 3c. Multiclass Phase Gate
+
+**Status: BLOCKED — must not start until all of the following are complete:**
+
+- VinDr DV binary benchmarking (Q17–Q23): **CLOSED** ✓
+- VinDr CV binary benchmarking (Q25–Q28): PENDING
+- DV vs CV binary comparative report (Q28): PENDING
+- Binary quantum release tagging (Q29): PENDING
 
 ---
 
@@ -86,8 +126,8 @@ The following ordering constraints are hard requirements, not preferences:
 1. **Do not start multiclass work until binary closure is complete for both datasets.**  
    Binary closure requires Q20, P21, and R-FINAL all completed.
 
-2. **Do not start continuous-variable quantum experiments until DV binary closure is complete.**  
-   DV binary closure requires Q19 (VinDr-SpineXR DV hybrid full training) and the equivalent PneumoniaMNIST DV work to be finished and reported.
+2. **CV binary experiments begin after DV binary closure — not after full binary closure.**  
+   VinDr DV binary closure (Q17–Q23) is now COMPLETE. CV binary benchmarking (Q25–Q28) is the next active phase. Do NOT start CV experiments before completing the DV phase (now satisfied).
 
 3. **Do not start VinDr-SpineXR DV hybrid full training (Q19) until the classical VinDr baseline (Q17) is validated and stable.**  
    The classical baseline establishes the performance reference that the DV hybrid result is measured against. A flawed or incomplete classical baseline invalidates the comparative report.
@@ -181,7 +221,10 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [x] **Q20** (VinDr-SpineXR DV Hybrid Pretrained-Backbone Feasibility) is completed
 - [x] **Q21** (VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training) is completed
 - [x] **Q22** (VinDr-SpineXR Approximate Trainable-Parameter-Matched Classical Control) is completed
-- [x] **Q23** (VinDr Binary Comparative Report) is completed — VinDr binary phase CLOSED
+- [x] **Q23** (VinDr DV Binary Comparative Report) is completed — VinDr **DV** binary phase CLOSED
+- [x] **Q24** (Roadmap Realignment for CV Binary Quantum Phase) is completed
+- [ ] **Q25–Q28** (VinDr CV binary benchmarking) is completed — PENDING
+- [ ] **Q29** (Binary Quantum Release Tagging) is completed — PENDING
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
 - [x] VinDr-SpineXR DV hybrid full baseline with random backbone (Q19) is completed
 - [x] VinDr-SpineXR DV hybrid full baseline with pretrained backbone (Q21) is completed
@@ -195,43 +238,50 @@ A dataset's comparative report is only valid if both the classical and DV hybrid
 
 ## 7. Deferred Work
 
-The following work is explicitly deferred until after binary closure (R-FINAL complete):
-
-### Multiclass
+### Multiclass (BLOCKED until Q29)
 
 | Item | Dataset |
 |---|---|
 | PathMNIST multiclass | PathMNIST |
 | VinDr-SpineXR multiclass | VinDr-SpineXR |
 
-### Continuous-Variable Quantum
+### Continuous-Variable Quantum — Active (Q25–Q29)
 
-| Item | Dataset |
-|---|---|
-| PneumoniaMNIST binary CV | PneumoniaMNIST |
-| VinDr-SpineXR binary CV | VinDr-SpineXR |
-| PathMNIST multiclass CV | PathMNIST |
-| VinDr-SpineXR multiclass CV | VinDr-SpineXR |
+VinDr-SpineXR binary CV is now the active next phase. It is no longer deferred.
 
-No resources or design work should be allocated to deferred items until the Definition of Done (Section 6) is satisfied.
+| Item | Dataset | Status |
+|---|---|---|
+| VinDr-SpineXR binary CV (Q25–Q28) | VinDr-SpineXR | **ACTIVE — next phase** |
+| PneumoniaMNIST binary CV | PneumoniaMNIST | Deferred until VinDr CV binary complete |
+| PathMNIST multiclass CV | PathMNIST | Deferred until Q29 |
+| VinDr-SpineXR multiclass CV | VinDr-SpineXR | Deferred until Q29 |
+
+No resources or design work should be allocated to multiclass items until Q29 is complete.
 
 ---
 
 ## 8. Immediate Next Action
 
-VinDr binary phase is **CLOSED** (Q23 complete).
+VinDr **DV** binary phase is **CLOSED** (Q23 complete).
+VinDr **CV** binary phase is **PENDING** (Q25 next).
 
 ```
-NEXT PHASE: Pending roadmap decision
+Run:
+Slice Q25 — Continuous-Variable Binary Feasibility Design
 
-Options:
-  (a) PneumoniaMNIST multiclass benchmarking (PathMNIST or multiclass variant)
-  (b) VinDr-SpineXR multiclass benchmarking
-  (c) P21 — PneumoniaMNIST Classical vs DV Hybrid Comparative Report
-      (required for global binary closure via R-FINAL)
+Goal:
+Design the CV binary experiment architecture for VinDr-SpineXR using:
+  - Gaussian ansatz (Gaussian boson sampling or Gaussian circuit formalism)
+  - Quadrature outputs (position/momentum quadrature measurements)
+  - Moment-based readout (first and second moments of output distribution)
+  - Symplectic formalism for gate operations
+  - QStrata-only integration (no external quantum libraries)
+
+No training. No implementation. Design and documentation only.
 
 References:
-  VinDr binary report: reports/vindr_binary_comparative_report.md
-  Q21: reports/vindr_dv_hybrid_pretrained_full_training.md
-  Q22: reports/vindr_classical_control_tiny_head.md
+  VinDr DV binary report: reports/vindr_binary_comparative_report.md
+  Q21 (DV benchmark):      reports/vindr_dv_hybrid_pretrained_full_training.md
+  Q22 (classical control): reports/vindr_classical_control_tiny_head.md
+  Q24 (this realignment):  reports/q24_roadmap_realignment_cv_binary.md
 ```

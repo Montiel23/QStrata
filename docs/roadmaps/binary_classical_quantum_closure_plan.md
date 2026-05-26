@@ -76,8 +76,8 @@ Binary closure is complete only when both datasets have finished both model type
 | Q24 | Roadmap Realignment for CV Binary Quantum Phase | COMPLETE |
 | Q25 | Continuous-Variable Binary Feasibility Design | COMPLETE |
 | Q25A | Roadmap Prioritization and Experiment Automation Planning | COMPLETE |
-| Q26 | Continuous-Variable Binary Smoke Test | NEXT |
-| Q27 | Continuous-Variable Binary Full Training | PLANNED |
+| Q26 | Continuous-Variable Binary Smoke Test | COMPLETE |
+| Q27 | Continuous-Variable Binary Full Training | NEXT |
 | Q28 | DV vs CV Binary Comparative Report | PLANNED |
 | Q29 | Binary Quantum Release Tagging | PLANNED |
 | — | **VinDr CV binary benchmarking** | **PENDING** |
@@ -105,25 +105,25 @@ No automation, NAS, or distributed infrastructure work should begin before this 
 
 | Slice | Description | Status |
 |---|---|---|
-| Q26 | CV Binary Smoke Test | NEXT |
-| Q27 | CV Binary Full Training | PLANNED |
+| Q26 | CV Binary Smoke Test | COMPLETE — PASS (2026-05-26) |
+| Q27 | CV Binary Full Training | NEXT |
 | Q28 | DV vs CV Binary Comparative Report | PLANNED |
 | Q29 | Binary Quantum Release Tagging | PLANNED |
 
-**Q26 — Technical assumptions (from Q25 final design):**
+**Q26 — Confirmed results (from `reports/q26_cv_binary_smoke_test.md`):**
 
-| Parameter | Value |
-|---|---|
-| Compression layer | `nn.Linear(128 → 4)` |
-| CV encoding | Complex displacement parameterization |
-| Ansatz | `GaussianVariationalAnsatz(n_modes=2, depth=1, squeezing_cap=1.5)` |
-| Readout | Deterministic first-moment readout (`mu_final`) |
-| Readout layer | `nn.Linear(4 → 2)` |
-| Expected trainable params | ≈ 536 |
-| CV backend | `GaussianBackend`, CPU-only accepted |
-| Separate CV scalar gate params | None unless QStrata backend strictly requires them |
-
-These assumptions supersede any earlier Q26 draft. Exact trainable count must be printed at startup.
+| Parameter | Value | Confirmed |
+|---|---|---|
+| Compression layer | `nn.Linear(128 → 4)` | ✓ |
+| CV encoding | `compressed * sqrt(2*hbar)` (gradient-safe) | ✓ |
+| Ansatz | `GaussianVariationalAnsatz(n_modes=2, depth=1, squeezing_cap=1.5)` | ✓ |
+| Readout | Deterministic first-moment readout (`mu_final`) | ✓ |
+| Readout layer | `nn.Linear(4 → 2)` | ✓ |
+| Actual trainable params | 536 (exact match to Q25A spec) | ✓ |
+| CV backend | `GaussianBackend(n_modes=2, hbar=2.0, device='cpu')` | ✓ |
+| Health checks | 14 / 14 PASS | ✓ |
+| Gradient flow | compression, ansatz, readout all received non-zero gradient | ✓ |
+| Backbone frozen | zero gradient confirmed | ✓ |
 
 ---
 
@@ -288,7 +288,8 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [x] **Q24** (Roadmap Realignment for CV Binary Quantum Phase) is completed
 - [x] **Q25** (CV binary feasibility design) is completed
 - [x] **Q25A** (Roadmap prioritization and automation planning) is completed
-- [ ] **Q26–Q28** (VinDr CV binary benchmarking) is completed — PENDING
+- [x] **Q26** (CV binary smoke test) is completed — PASS (2026-05-26)
+- [ ] **Q27–Q28** (VinDr CV binary benchmarking) is completed — IN PROGRESS
 - [ ] **Q29** (Binary Quantum Release Tagging) is completed — PENDING
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
 - [x] VinDr-SpineXR DV hybrid full baseline with random backbone (Q19) is completed
@@ -328,31 +329,26 @@ No resources or design work should be allocated to multiclass items until Q29 is
 ## 8. Immediate Next Action
 
 VinDr **DV** binary phase is **CLOSED** (Q23 complete).
-VinDr **CV** binary phase is **PENDING** (Q26 next — smoke test).
-Roadmap priorities and automation gating documented (Q25A complete).
+VinDr **CV** binary phase is **IN PROGRESS** — Q26 smoke test **PASSED** (2026-05-26).
+Q27 (CV Binary Full Training) is the immediate next slice.
 
 ```
 Run:
-Slice Q26 — Continuous-Variable Binary Smoke Test
+Slice Q27 — Continuous-Variable Binary Full Training
 
 Goal:
-Implement the minimal CV pipeline defined in Q25 and validate:
-  - Forward pass executes without error (one batch, batch_size=4)
-  - All health checks PASS (forward, gradient, optimizer, CV-specific)
-  - Gradient flow confirmed through compression, ansatz, and readout layers
-  - Backbone receives zero gradient throughout
-  - One optimizer step executes and parameters update
-  - No NaN or inf at any point
-
-Architecture:
-  - Frozen C006-D040 backbone (same as Q21)
-  - feature_compression: nn.Linear(128, 4) [n_modes=2]
-  - GaussianVariationalAnsatz(n_modes=2, depth=1, squeezing_cap=1.5) from qcore/ansatz/cv_spine_ansatz.py
-  - GaussianBackend(n_modes=2, hbar=2.0, device='cpu') from qcore/backends/cvBackend.py
+Train the validated CV pipeline (Q26-confirmed architecture) on VinDr-SpineXR binary
+for 15 epochs and produce the first valid CV hybrid benchmark result:
+  - Same dataset splits, seed, LR, optimizer, and backbone as Q21/Q22
+  - GaussianVariationalAnsatz(n_modes=2, depth=1, squeezing_cap=1.5)
+  - GaussianBackend(n_modes=2, hbar=2.0, device='cpu')
   - First-moment readout: mu_final → nn.Linear(4, 2) → binary logits
-  - Estimated trainable params: ~536
+  - 536 trainable parameters (confirmed by Q26)
+  - Per-epoch: train loss, val AUROC/F1, CV gradient norms, backbone gradient check
 
 References:
-  Q25 design: reports/q25_cv_binary_feasibility_design.md
-  Q21 script:  scripts/train_vindr_dv_hybrid_pretrained.py
+  Q26 smoke test:  reports/q26_cv_binary_smoke_test.md
+  Q25 design:      reports/q25_cv_binary_feasibility_design.md
+  Q21 script:      scripts/train_vindr_dv_hybrid_pretrained.py
+  Q26 script:      scripts/smoke_test_vindr_cv_binary.py  (architecture reference)
 ```

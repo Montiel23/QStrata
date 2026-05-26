@@ -80,12 +80,13 @@ Binary closure is complete only when both datasets have finished both model type
 | Q27 | Continuous-Variable Binary Full Training | COMPLETE |
 | Q27A | NAS Strategy and Optimization Phase Refinement | COMPLETE |
 | Q28 | DV vs CV Binary Comparative Report | COMPLETE |
-| Q29 | Binary Quantum Release Tagging | NEXT |
+| Q29 | Binary Quantum Release Tagging | COMPLETE |
 | — | **VinDr CV binary benchmarking** | **CLOSED** |
-| — | **Overall VinDr binary quantum benchmarking** | **PENDING Q29 RELEASE TAG** |
+| — | **Overall VinDr binary quantum benchmarking** | **CLOSED** |
 | P21 | PneumoniaMNIST Classical vs DV Hybrid Comparative Report | TODO |
 | R-FINAL | Global Binary Benchmark Technical Summary | TODO |
-| — | **NEXT PHASE — Multiclass benchmarking** | **BLOCKED until Q29 complete** |
+| — | **NEXT PHASE — Optimization / NAS** | **UNBLOCKED — Q30 is NEXT** |
+| — | **NEXT PHASE — Multiclass benchmarking** | **UNBLOCKED — scheduling pending** |
 
 **Slice descriptions — CV binary phase:**
 
@@ -110,7 +111,7 @@ No automation, NAS, or distributed infrastructure work begins before Q29 is comp
 | Q26 | CV Binary Smoke Test | COMPLETE — PASS (2026-05-26) |
 | Q27 | CV Binary Full Training | COMPLETE — PASS (2026-05-26) |
 | Q28 | DV vs CV Binary Comparative Report | COMPLETE (2026-05-26) |
-| Q29 | Binary Quantum Release Tagging | NEXT |
+| Q29 | Binary Quantum Release Tagging | COMPLETE (2026-05-26) |
 
 **Q26 — Confirmed results (from `reports/q26_cv_binary_smoke_test.md`):**
 
@@ -150,13 +151,13 @@ No automation, NAS, or distributed infrastructure work begins before Q29 is comp
 ## 3c. Future Experiment Automation Phase
 
 All slices in this phase are **PLANNED**.
-All slices in this phase are **BLOCKED** until Q29 (Binary Quantum Release Tagging) is complete.
+Q29 is now complete — this phase is **UNBLOCKED**. Q30 is the immediate next slice.
 
-Do not begin any automation, NAS, or infrastructure work before that gate.
+The gating condition has been met: Q29 (Binary Quantum Release Tagging) is COMPLETE (2026-05-26).
 
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
-| Q30 | Experiment Automation Framework Design | PLANNED | Q29 complete |
+| Q30 | Experiment Automation Framework Design | NEXT | Q29 complete ✓ |
 | Q31 | Local GPU Experiment Runner | PLANNED | Q30 complete |
 | Q32 | NAS Search Space Design — Classical Feature Extractors | PLANNED | Q31 complete |
 | Q33 | NAS Search Space Design — Quantum Heads (DV/CV) | PLANNED | Q32 complete |
@@ -176,12 +177,14 @@ Do not begin any automation, NAS, or infrastructure work before that gate.
 
 ## 3d. NAS / AWS / Ray Gating Rules
 
-NAS, AWS, and Ray work is **BLOCKED** until ALL of the following are complete:
+NAS, AWS, and Ray work was **BLOCKED** until ALL of the following were complete:
 
-- Q26: CV binary smoke test **PASSES**
-- Q27: CV binary full training **COMPLETE**
-- Q28: DV vs CV binary comparative analysis **COMPLETE**
-- Q29: Binary quantum release tagging **COMPLETE**
+- Q26: CV binary smoke test **PASSES** — ✓ COMPLETE (2026-05-26)
+- Q27: CV binary full training **COMPLETE** — ✓ COMPLETE (2026-05-26)
+- Q28: DV vs CV binary comparative analysis **COMPLETE** — ✓ COMPLETE (2026-05-26)
+- Q29: Binary quantum release tagging **COMPLETE** — ✓ COMPLETE (2026-05-26)
+
+**Gate cleared.** All four conditions are now satisfied. NAS, AWS, and Ray work is UNBLOCKED. Q30 is the immediate next slice.
 
 **Reason:** Do not automate search before the CV baseline is scientifically validated and
 binary benchmarking is formally closed. Premature scaling increases uncertainty and wastes
@@ -265,12 +268,14 @@ Tags must not be created until all required slices in each phase are complete.
 
 ## 3g. Multiclass Phase Gate
 
-**Status: BLOCKED — must not start until all of the following are complete:**
+**Status: UNBLOCKED — all binary phase prerequisites are now complete.**
 
 - VinDr DV binary benchmarking (Q17–Q23): **CLOSED** ✓
-- VinDr CV binary benchmarking (Q25–Q28): PENDING
-- DV vs CV binary comparative report (Q28): PENDING
-- Binary quantum release tagging (Q29): PENDING
+- VinDr CV binary benchmarking (Q25–Q28): **CLOSED** ✓ (2026-05-26)
+- DV vs CV binary comparative report (Q28): **COMPLETE** ✓ (2026-05-26)
+- Binary quantum release tagging (Q29): **COMPLETE** ✓ (2026-05-26)
+
+Multiclass benchmarking may now be scheduled. The immediate execution priority remains Q30 (Experiment Automation Framework Design). Multiclass slices should be planned in parallel but not executed before Q30 design is complete.
 
 ---
 
@@ -384,7 +389,7 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [x] **Q27** (CV binary full training) is completed — PASS (2026-05-26): Test AUROC 0.6708
 - [x] **Q27A** (NAS strategy and optimization phase refinement) is completed — COMPLETE (2026-05-26)
 - [x] **Q28** (DV vs CV binary comparative report) is completed — COMPLETE (2026-05-26)
-- [ ] **Q29** (Binary Quantum Release Tagging) is completed — NEXT
+- [x] **Q29** (Binary Quantum Release Tagging) is completed — COMPLETE (2026-05-26)
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
 - [x] VinDr-SpineXR DV hybrid full baseline with random backbone (Q19) is completed
 - [x] VinDr-SpineXR DV hybrid full baseline with pretrained backbone (Q21) is completed
@@ -398,35 +403,35 @@ A dataset's comparative report is only valid if both the classical and DV hybrid
 
 ## 7. Deferred Work
 
-### Multiclass (BLOCKED until Q29)
+### Multiclass (unblocked — scheduling pending)
 
-| Item | Dataset |
-|---|---|
-| PathMNIST multiclass | PathMNIST |
-| VinDr-SpineXR multiclass | VinDr-SpineXR |
-
-### Continuous-Variable Quantum — Active (Q25–Q29)
-
-VinDr-SpineXR binary CV is now the active next phase. It is no longer deferred.
+Q29 is now complete. Multiclass benchmarking may be scheduled. Immediate execution priority is Q30.
 
 | Item | Dataset | Status |
 |---|---|---|
-| VinDr-SpineXR binary CV (Q25–Q28) | VinDr-SpineXR | **ACTIVE — next phase** |
-| PneumoniaMNIST binary CV | PneumoniaMNIST | Deferred until VinDr CV binary complete |
-| PathMNIST multiclass CV | PathMNIST | Deferred until Q29 |
-| VinDr-SpineXR multiclass CV | VinDr-SpineXR | Deferred until Q29 |
+| PathMNIST multiclass | PathMNIST | Unblocked — scheduling pending |
+| VinDr-SpineXR multiclass | VinDr-SpineXR | Unblocked — scheduling pending |
 
-No resources or design work should be allocated to multiclass items until Q29 is complete.
+### Continuous-Variable Quantum — Closed
+
+VinDr-SpineXR binary CV phase (Q25–Q28) is now **CLOSED**.
+
+| Item | Dataset | Status |
+|---|---|---|
+| VinDr-SpineXR binary CV (Q25–Q28) | VinDr-SpineXR | **CLOSED** — Q29 complete |
+| PneumoniaMNIST binary CV | PneumoniaMNIST | Deferred — scheduling pending after Q30 |
+| PathMNIST multiclass CV | PathMNIST | Deferred — scheduling pending |
+| VinDr-SpineXR multiclass CV | VinDr-SpineXR | Deferred — scheduling pending |
 
 ---
 
 ## 8. Immediate Next Action
 
 VinDr **DV** binary phase is **CLOSED** (Q23 complete).
-VinDr **CV** binary phase is **CLOSED** — Q26 PASS, Q27 PASS, Q28 **COMPLETE** (2026-05-26).
-Q27A (NAS Strategy and Optimization Phase Refinement) is **COMPLETE** (2026-05-26).
-Q28 (DV vs CV Binary Comparative Report) is **COMPLETE** (2026-05-26).
-Q29 (Binary Quantum Release Tagging) is the immediate next slice.
+VinDr **CV** binary phase is **CLOSED** — Q26 PASS, Q27 PASS, Q28 COMPLETE (2026-05-26).
+Q27A **COMPLETE** (2026-05-26). Q28 **COMPLETE** (2026-05-26). Q29 **COMPLETE** (2026-05-26).
+**Overall VinDr binary quantum benchmarking: CLOSED.**
+Q30 (Experiment Automation Framework Design) is the immediate next slice.
 
 **Q28 — Confirmed results (from `reports/q28_dv_vs_cv_binary_comparative_report.md`):**
 
@@ -439,19 +444,32 @@ Q29 (Binary Quantum Release Tagging) is the immediate next slice.
 
 **Key finding:** Compact bottleneck with frozen pretrained backbone is the dominant contributor to improvement over Q17. DV and CV hybrids both exceed the parameter-matched classical control (Q22) by small margins (+0.0175 and +0.0083 AUROC respectively). No quantum advantage is claimed.
 
+**Q29 — COMPLETE (2026-05-26)**
+
+Three annotated release tags created on commit dc7fff6 (Q28):
+- `qstrata-vindr-dv-binary-v1` — VinDr DV binary benchmarking package (Q17–Q23)
+- `qstrata-vindr-cv-binary-v1` — VinDr CV binary benchmarking package (Q25–Q28)
+- `qstrata-vindr-binary-comparative-v1` — Full binary comparative release (Q28)
+
+Binary benchmarking phase: **CLOSED**.
+
 ```
 Execute:
-Slice Q29 — Binary Quantum Release Tagging
+Slice Q30 — Experiment Automation Framework Design
 
 Goal:
-Formally close the VinDr binary quantum benchmarking program with release tags:
-  vindr-binary-dv-v1       — VinDr DV binary phase (Q17–Q23)
-  vindr-binary-cv-v1       — VinDr CV binary phase (Q25–Q28)
-  vindr-binary-complete-v1 — Full VinDr binary quantum program (Q17–Q28)
+Design reproducible local experiment orchestration framework covering:
+  - metric tracking schema
+  - checkpoint management conventions
+  - sweep configuration format (YAML)
+  - artifact naming and logging structure
 
-Prerequisites (all confirmed):
-  Q23 COMPLETE — VinDr DV binary closure
-  Q26 COMPLETE — CV smoke test PASS
-  Q27 COMPLETE — CV full training PASS
-  Q28 COMPLETE — DV vs CV comparative report
+Output: design document only. No training runs. No code committed.
+Gate: Q29 COMPLETE ✓
+
+Reference (frozen benchmarks):
+  Q17 Classical:        AUROC 0.6224, F1 0.5355, params 23,650
+  Q21 DV Hybrid:        AUROC 0.6800, F1 0.6159, params 574
+  Q22 Tiny Classical:   AUROC 0.6625, F1 0.5961, params 526
+  Q27 CV Hybrid:        AUROC 0.6708, F1 0.6283, params 536
 ```

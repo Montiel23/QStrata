@@ -70,7 +70,8 @@ Binary closure is complete only when both datasets have finished both model type
 | Q19 | VinDr-SpineXR DV Hybrid Full Training (random backbone) | DONE |
 | Q20 | VinDr-SpineXR DV Hybrid Pretrained-Backbone Feasibility | DONE |
 | Q21 | VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training | DONE |
-| Q22 | VinDr-SpineXR Classical vs DV Hybrid Comparative Report | NEXT |
+| Q22 | VinDr-SpineXR Approximate Trainable-Parameter-Matched Classical Control | COMPLETE |
+| Q23 | VinDr Classical vs DV Hybrid vs Tiny Classical Comparative Report | NEXT |
 | P21 | PneumoniaMNIST Classical vs DV Hybrid Comparative Report | TODO |
 | R-FINAL | Global Binary Benchmark Technical Summary | TODO |
 
@@ -177,7 +178,7 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [ ] **P21** (PneumoniaMNIST Classical vs DV Hybrid Comparative Report) is completed
 - [x] **Q20** (VinDr-SpineXR DV Hybrid Pretrained-Backbone Feasibility) is completed
 - [x] **Q21** (VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training) is completed
-- [ ] **Q22** (VinDr-SpineXR Classical vs DV Hybrid Comparative Report) is completed
+- [x] **Q22** (VinDr-SpineXR Approximate Trainable-Parameter-Matched Classical Control) is completed
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
 - [x] VinDr-SpineXR DV hybrid full baseline with random backbone (Q19) is completed
 - [x] VinDr-SpineXR DV hybrid full baseline with pretrained backbone (Q21) is completed
@@ -217,18 +218,21 @@ No resources or design work should be allocated to deferred items until the Defi
 
 ```
 Run:
-Slice Q22 — VinDr-SpineXR Classical vs DV Hybrid Comparative Report
+Slice Q23 — VinDr Classical vs DV Hybrid vs Tiny Classical Comparative Report
 
 Goal:
-Produce the VinDr-SpineXR binary comparative report comparing:
+Produce the VinDr-SpineXR binary comparative report consolidating Q17, Q21, and Q22:
   - Q17 classical baseline (CNN3Block, [16,32,64], 23,650 params, AUROC 0.6224, F1 0.5355)
   - Q21 DV hybrid pretrained baseline (DVHybridCNNQNN, 574 trainable, AUROC 0.6800, F1 0.6159)
+  - Q22 tiny classical control (TinyClassicalHead, 526 trainable, AUROC 0.6625, F1 0.5961)
 
-Apply the Q20 interpretation guardrail: do NOT claim quantum advantage. The Q17 classical
-baseline may be architecturally weak (missing inter-block MaxPool). A valid architectural
-ablation must be noted before any architecture-level conclusion is drawn.
+Q22 shows Q22 < Q21 by ~0.018 AUROC. The tiny classical control does not explain the Q21
+improvement via compact bottleneck alone. Apply all active guardrails; do NOT claim quantum
+advantage. Document the latency asymmetry between CPU quantum simulation (Q21) and GPU
+classical inference (Q22, Q17). Recommend next experimental steps.
 ```
 
-Q17 reference: `reports/vindr_classical_baseline.md`  
-Q21 reference: `reports/vindr_dv_hybrid_pretrained_full_training.md`  
+Q17 reference: `reports/vindr_classical_baseline.md`
+Q21 reference: `reports/vindr_dv_hybrid_pretrained_full_training.md`
+Q22 reference: `reports/vindr_classical_control_tiny_head.md`
 Q20 guardrail: See Section 5c of this roadmap

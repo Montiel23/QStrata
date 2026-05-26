@@ -74,8 +74,8 @@ Binary closure is complete only when both datasets have finished both model type
 | Q23 | VinDr DV Binary Comparative Report | COMPLETE |
 | — | **VinDr DV binary benchmarking** | **CLOSED** |
 | Q24 | Roadmap Realignment for CV Binary Quantum Phase | COMPLETE |
-| Q25 | Continuous-Variable Binary Feasibility Design | PLANNED |
-| Q26 | Continuous-Variable Binary Smoke Test | PLANNED |
+| Q25 | Continuous-Variable Binary Feasibility Design | COMPLETE |
+| Q26 | Continuous-Variable Binary Smoke Test | NEXT |
 | Q27 | Continuous-Variable Binary Full Training | PLANNED |
 | Q28 | DV vs CV Binary Comparative Report | PLANNED |
 | Q29 | Binary Quantum Release Tagging | PLANNED |
@@ -223,7 +223,8 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [x] **Q22** (VinDr-SpineXR Approximate Trainable-Parameter-Matched Classical Control) is completed
 - [x] **Q23** (VinDr DV Binary Comparative Report) is completed — VinDr **DV** binary phase CLOSED
 - [x] **Q24** (Roadmap Realignment for CV Binary Quantum Phase) is completed
-- [ ] **Q25–Q28** (VinDr CV binary benchmarking) is completed — PENDING
+- [x] **Q25** (CV binary feasibility design) is completed
+- [ ] **Q26–Q28** (VinDr CV binary benchmarking) is completed — PENDING
 - [ ] **Q29** (Binary Quantum Release Tagging) is completed — PENDING
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
 - [x] VinDr-SpineXR DV hybrid full baseline with random backbone (Q19) is completed
@@ -267,21 +268,26 @@ VinDr **CV** binary phase is **PENDING** (Q25 next).
 
 ```
 Run:
-Slice Q25 — Continuous-Variable Binary Feasibility Design
+Slice Q26 — Continuous-Variable Binary Smoke Test
 
 Goal:
-Design the CV binary experiment architecture for VinDr-SpineXR using:
-  - Gaussian ansatz (Gaussian boson sampling or Gaussian circuit formalism)
-  - Quadrature outputs (position/momentum quadrature measurements)
-  - Moment-based readout (first and second moments of output distribution)
-  - Symplectic formalism for gate operations
-  - QStrata-only integration (no external quantum libraries)
+Implement the minimal CV pipeline defined in Q25 and validate:
+  - Forward pass executes without error (one batch, batch_size=4)
+  - All health checks PASS (forward, gradient, optimizer, CV-specific)
+  - Gradient flow confirmed through compression, ansatz, and readout layers
+  - Backbone receives zero gradient throughout
+  - One optimizer step executes and parameters update
+  - No NaN or inf at any point
 
-No training. No implementation. Design and documentation only.
+Architecture:
+  - Frozen C006-D040 backbone (same as Q21)
+  - feature_compression: nn.Linear(128, 4) [n_modes=2]
+  - GaussianVariationalAnsatz(n_modes=2, depth=1, squeezing_cap=1.5) from qcore/ansatz/cv_spine_ansatz.py
+  - GaussianBackend(n_modes=2, hbar=2.0, device='cpu') from qcore/backends/cvBackend.py
+  - First-moment readout: mu_final → nn.Linear(4, 2) → binary logits
+  - Estimated trainable params: ~536
 
 References:
-  VinDr DV binary report: reports/vindr_binary_comparative_report.md
-  Q21 (DV benchmark):      reports/vindr_dv_hybrid_pretrained_full_training.md
-  Q22 (classical control): reports/vindr_classical_control_tiny_head.md
-  Q24 (this realignment):  reports/q24_roadmap_realignment_cv_binary.md
+  Q25 design: reports/q25_cv_binary_feasibility_design.md
+  Q21 script:  scripts/train_vindr_dv_hybrid_pretrained.py
 ```

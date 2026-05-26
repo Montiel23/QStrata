@@ -125,6 +125,27 @@ All full baseline runs (Q17, Q19, and the PneumoniaMNIST comparative re-run if n
 
 ---
 
+## 5b. Q20 Interpretation Guardrail
+
+> **Added after Q18 (Slice Q18 — 2026-05-26)**
+
+```
+Q20 Interpretation Guardrail:
+If the DV hybrid model outperforms the current VinDr-SpineXR classical baseline
+(Q17: AUROC 0.6224, F1 0.5355), do NOT claim quantum advantage. The Q17 classical
+baseline is potentially weak due to missing inter-block spatial downsampling.
+A classical ablation with MaxPool/inter-block downsampling must be run and compared
+before any architecture-level conclusions are drawn from the Q20 comparative report.
+```
+
+**Background:** The Q17 classical baseline (CNN3Block, 23,650 params) exhibited training
+instability — validation loss spiked while training loss decreased, suggesting the
+architecture without inter-block MaxPool is not the strongest classical reference.
+Any Q20 comparison must account for this architectural limitation before attributing
+performance differences to quantum vs classical effects.
+
+---
+
 ## 6. Definition of Done
 
 Binary closure is complete when **ALL** of the following conditions are true:

@@ -1,19 +1,33 @@
 """
 qcore/experiments/schema.py
 
-Config schema validation for the QStrata experiment runner (Q31 MVP).
+Config schema validation for the QStrata experiment runner.
 
 Validates a loaded config dict against the required fields defined in
-docs/specs/qstrata_experiment_config_schema.md (Q30 design).
+docs/specs/qstrata_experiment_config_schema.md.
 
 No external validation libraries are used. Field presence is checked
 using dot-notation path traversal.
+
+Required fields (as of Q31A formalization):
+    experiment.phase        — lifecycle phase identifier
+    dataset.name            — dataset identifier
+    model.architecture      — architecture family
+    reproducibility.seed    — integer random seed
+    command.executable      — subprocess executable (e.g. "python3")
+    command.args            — list of argument strings for the subprocess
+
+The command block (command.executable + command.args) was added in Q31 to
+decouple the runner from model logic, and formalized as a first-class required
+field in Q31A. NAS-generated configs (Q32+) produce valid command blocks and
+are executed by the runner identically to hand-crafted configs.
 """
 
 from __future__ import annotations
 
 # Minimum required fields for any experiment config.
 # Uses dot-notation paths relative to the config dict root.
+# command.executable and command.args are first-class required fields (Q31A).
 REQUIRED_FIELDS: list[str] = [
     "experiment.phase",
     "dataset.name",

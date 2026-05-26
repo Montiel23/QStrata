@@ -1,0 +1,20 @@
+{
+  "timestamp": "2026-05-26T23:28:01.513008",
+  "config": "configs/experiments/q31_smoke_vindr_cv_binary.yaml",
+  "runs": 2,
+  "tolerance": 0.0001,
+  "result_files": [
+    "experiments/results/20260526_232753_1f1b26.json",
+    "experiments/results/20260526_232757_a4a4aa.json"
+  ],
+  "comparison": {
+    "status_match": true,
+    "return_code_match": true,
+    "smoke_pass_match": true,
+    "trainable_params_match": true,
+    "loss_delta": 0.0,
+    "loss_within_tolerance": true
+  },
+  "pass": true,
+  "notes": "All checks passed."
+}

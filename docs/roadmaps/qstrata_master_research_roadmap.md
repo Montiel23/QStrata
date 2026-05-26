@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-26  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q31 COMPLETE — Q31A NEXT
+**Status:** Q31A COMPLETE — Q32 NEXT (design only)
 
 ---
 
@@ -71,18 +71,19 @@ These values are frozen. Future comparative work must reference them explicitly.
 |---|---|---|---|
 | Q30 | Experiment Automation Framework Design | **COMPLETE** | Q29 ✓ |
 | Q31 | Local GPU Experiment Runner MVP | **COMPLETE** | Q30 ✓ |
-| Q31A | Runner Reproducibility Test and Hardening | **NEXT** | Q31 ✓ |
+| Q31A | Runner Reproducibility Test and Hardening | **COMPLETE** | Q31 ✓ |
 
 **Phase 2 gate:** Q29 complete ✓  
-**Phase 2 status:** Q30 complete; Q31 complete; Q31A NEXT
+**Phase 2 status:** Q30 complete; Q31 complete; Q31A complete — Phase 2 COMPLETE
 
 ### Phase 3 — Classical NAS Ceiling (PLANNED)
 
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
-| Q32 | NAS Search Space Design — Classical Feature Extractors | PLANNED | Q31 complete |
+| Q32 | NAS Search Space Design — Classical Feature Extractors | **NEXT** (design only) | Q31A ✓ |
 
-**Phase 3 gate:** Q31A (runner hardening) must be complete  
+**Phase 3 gate:** Q31A (runner hardening) complete ✓  
+**Phase 3 note (Q32):** Q32 is design only — no NAS execution. Defines the classical CNN search space and config template. NAS execution begins in Q34.  
 **Phase 3 note:** Classical NAS always precedes quantum NAS. The classical ceiling defines the evaluation reference for all quantum head search.
 
 ### Phase 4 — Quantum NAS (PLANNED)
@@ -144,8 +145,8 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 |---|---|---|
 | Q30 complete | ✓ | Binary closure (Q29) |
 | Q31 complete | ✓ | Q30 complete |
-| Q31A complete | NEXT | Q31 complete |
-| Q32 unblocked | PLANNED | Q31A complete |
+| Q31A complete | ✓ | Q31 complete |
+| Q32 unblocked | NEXT (design only) | Q31A ✓ |
 | Q33 unblocked | PLANNED | Q32 classical ceiling |
 | Q34 unblocked | PLANNED | Q33 quantum NAS |
 | Q35 unblocked | BLOCKED | Q34 local NAS validated |
@@ -185,25 +186,28 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 
 ## 5. Immediate Next Action
 
-**Q31A — Runner Reproducibility Test and Hardening**
+**Q32 — NAS Search Space Design: Classical Feature Extractors**
 
-Purpose: validate the Q31 runner by running the same config twice and confirming identical results within tolerance; resolve git capture in container; add signal handler skeleton; extend config schema to document the `command` block.
+Purpose: define the classical CNN search space (block types, channel counts, depths, pooling strategies) and produce the YAML config template for Q31A runner execution. Q32 is design only — no NAS search is executed. The classical ceiling must be established before quantum NAS (Q33) can begin.
 
 Reference documents:
 - `docs/architecture/qstrata_experiment_automation_framework.md`
 - `docs/specs/qstrata_experiment_config_schema.md`
-- `reports/q31_local_gpu_experiment_runner_mvp.md`
+- `reports/q31a_runner_reproducibility_test_and_hardening.md`
 
-Gate: Q31 complete ✓ (smoke PASS — experiment_id 20260526_222939_a508a2)
+Gate: Q31A complete ✓ (reproducibility PASS — two runs, loss_delta=0.0, tolerance 0.0001)
 
 ---
 
 ```
 Q30 status: COMPLETE
 Q31 status: COMPLETE — smoke PASS (experiment_id 20260526_222939_a508a2)
-Q31A status: NEXT — Runner Reproducibility Test and Hardening
-Q32 status: PLANNED — gated after Q31A
+Q31A status: COMPLETE — reproducibility PASS (loss_delta=0.0, tolerance 0.0001)
+Q32 status: NEXT — design only; no NAS execution
+Phase 2 (Experiment Automation): COMPLETE
+Phase 3 (Classical NAS Ceiling): IN PROGRESS — Q32 NEXT (design only)
 Binary benchmarking phase: CLOSED
 Multiclass: BLOCKED (requires Phase 3 + 4 + 5)
 AWS/Ray: BLOCKED (requires Q34 local NAS validated)
+Object detection: BLOCKED (out of current roadmap scope)
 ```

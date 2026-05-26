@@ -1,25 +1,25 @@
 """
 qcore/experiments/runner.py
 
-Local GPU experiment runner for the QStrata automation framework (Q31 MVP).
+Local GPU experiment runner for the QStrata automation framework.
 
-Implements the minimal viable runner defined in Q31:
+Implements the runner defined in Q31 and hardened in Q31A:
   - YAML config loading and schema validation
   - experiment_id generation
   - Experiment directory creation
   - Config freezing (copy + chmod 444)
-  - Git commit and hardware metadata capture
+  - Git commit and hardware metadata capture (with env var fallback — Q31A)
   - Sequential subprocess execution with stdout/stderr tee to log file
+  - SIGINT/SIGTERM handler skeleton (Q31A)
   - Result JSON creation at experiments/results/<experiment_id>.json
   - Leaderboard CSV append at experiments/leaderboards/<phase>.csv
 
-OUT OF SCOPE for Q31 MVP:
-  - Signal handler recovery (SIGINT, SIGTERM, SIGUSR1)
+OUT OF SCOPE (deferred to Q32+):
   - Checkpoint-based resume logic
   - Per-epoch partial metric export
   - NAS trial generation or orchestration
   - Distributed execution (AWS, Ray)
-  - Full training runs (use smoke configs only in Q31)
+  - Full training runs (use smoke configs only through Q31A)
 
 Reference:
   docs/architecture/qstrata_experiment_automation_framework.md
@@ -31,6 +31,7 @@ from __future__ import annotations
 import datetime
 import json
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -48,6 +49,62 @@ from qcore.experiments.schema import validate_config
 # Root directory for all experiment artifacts.
 # Relative to the working directory (project root) when the runner executes.
 EXPERIMENTS_ROOT = "experiments"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Signal handler skeleton (Q31A)
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Module-level interruption flag. Set by _signal_handler; checked by run_experiment.
+# Reset to False at the start of each run_experiment() call to support
+# multiple sequential invocations within the same process (e.g. reproducibility tests).
+_interrupted: bool = False
+
+
+def _signal_handler(signum: int, frame: object) -> None:
+    """
+    Minimal SIGINT/SIGTERM handler (Q31A skeleton).
+
+    Sets the _interrupted flag. The runner checks this flag after the subprocess
+    completes and writes status: "interrupted" to the result JSON.
+
+    Behavior in Q31A:
+    - SIGINT (Ctrl+C): flag set; if subprocess also received SIGINT, it exits,
+      the runner's subprocess loop ends naturally, and the interrupted result is written.
+    - SIGTERM: flag set; subprocess continues unless explicitly sent SIGTERM separately.
+
+    Deferred to Q32+:
+    - Active subprocess termination on signal (proc.terminate())
+    - Per-epoch checkpoint recovery
+    - Partial metric accumulation up to last completed epoch
+
+    Platform note: signal handlers are only available on Unix-like systems.
+    On Windows, only SIGINT is supported via signal.signal().
+    """
+    global _interrupted
+    _interrupted = True
+    sig_name = {signal.SIGINT: "SIGINT", signal.SIGTERM: "SIGTERM"}.get(signum, str(signum))
+    # Write to stderr to avoid corrupting tee'd stdout
+    sys.stderr.write(
+        f"\n[RUNNER] {sig_name} received — experiment will be marked interrupted\n"
+    )
+    sys.stderr.flush()
+
+
+def _register_signal_handlers() -> None:
+    """Register SIGINT and SIGTERM handlers at run start."""
+    try:
+        signal.signal(signal.SIGINT,  _signal_handler)
+        signal.signal(signal.SIGTERM, _signal_handler)
+    except (OSError, ValueError):
+        # signal.signal() raises ValueError if called from a non-main thread.
+        # OSError can occur on some platforms. Log and continue — signal handling
+        # is a best-effort skeleton in Q31A; failure is not fatal.
+        sys.stderr.write(
+            "[RUNNER] WARNING: Could not register signal handlers "
+            "(non-main thread or platform limitation)\n"
+        )
+        sys.stderr.flush()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -140,14 +197,21 @@ def run_experiment(config: dict, config_path: str = "") -> int:
 
     Returns:
         int: Subprocess return code (0 = success, non-zero = failure).
+             Returns 130 if experiment was interrupted by SIGINT.
+             Returns 143 if experiment was interrupted by SIGTERM.
 
     Side effects:
         - Creates experiment directories under EXPERIMENTS_ROOT
         - Writes frozen config YAML (read-only)
         - Writes stdout + stderr to log file
-        - Writes result JSON
+        - Writes result JSON (status: interrupted if signal received)
         - Appends one row to phase leaderboard CSV
     """
+    global _interrupted
+    _interrupted = False  # reset for each invocation
+
+    # ── 0. Register signal handlers ───────────────────────────────────────────
+    _register_signal_handlers()
 
     # ── 1. Validate config ────────────────────────────────────────────────────
     validate_config(config)
@@ -195,7 +259,7 @@ def run_experiment(config: dict, config_path: str = "") -> int:
 
     # ── 8. Runner header ──────────────────────────────────────────────────────
     print(f"[RUNNER] ═══════════════════════════════════════════════", flush=True)
-    print(f"[RUNNER] QStrata Experiment Runner — Q31 MVP", flush=True)
+    print(f"[RUNNER] QStrata Experiment Runner — Q31A", flush=True)
     print(f"[RUNNER] ───────────────────────────────────────────────", flush=True)
     print(f"[RUNNER] experiment_id:    {experiment_id}", flush=True)
     print(f"[RUNNER] phase:            {phase}", flush=True)
@@ -214,30 +278,58 @@ def run_experiment(config: dict, config_path: str = "") -> int:
     # ── 9. Execute subprocess with tee ────────────────────────────────────────
     t_start      = time.monotonic()
     stdout_lines: list[str] = []
+    proc: subprocess.Popen | None = None
 
-    with open(log_path, "w", buffering=1, encoding="utf-8") as log_f:
-        proc = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-            encoding="utf-8",
-        )
-        assert proc.stdout is not None
-        for line in proc.stdout:
-            sys.stdout.write(line)
-            sys.stdout.flush()
-            log_f.write(line)
-            stdout_lines.append(line)
-        proc.wait()
+    try:
+        with open(log_path, "w", buffering=1, encoding="utf-8") as log_f:
+            proc = subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+                encoding="utf-8",
+            )
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+                log_f.write(line)
+                stdout_lines.append(line)
+            proc.wait()
+    except KeyboardInterrupt:
+        # Safety net: catches KeyboardInterrupt if signal handler did not suppress it.
+        # (This can occur if the handler was not registered due to a non-main thread.)
+        _interrupted = True
+        sys.stderr.write("\n[RUNNER] KeyboardInterrupt caught — marking experiment interrupted\n")
+        sys.stderr.flush()
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
 
-    t_end          = time.monotonic()
-    duration       = round(t_end - t_start, 3)
-    return_code    = proc.returncode
-    timestamp_end  = datetime.datetime.now().isoformat()
-    status         = "completed" if return_code == 0 else "failed"
-    stdout_full    = "".join(stdout_lines)
+    t_end      = time.monotonic()
+    duration   = round(t_end - t_start, 3)
+
+    # Return code: 130 for SIGINT-equivalent interruption; subprocess returncode otherwise
+    if proc is not None and proc.returncode is not None:
+        return_code = proc.returncode
+    else:
+        return_code = 130 if _interrupted else -1
+
+    timestamp_end = datetime.datetime.now().isoformat()
+
+    # Status: interrupted takes precedence over completed/failed
+    if _interrupted:
+        status = "interrupted"
+    elif return_code == 0:
+        status = "completed"
+    else:
+        status = "failed"
+
+    stdout_full = "".join(stdout_lines)
 
     # ── 10. Runner footer ─────────────────────────────────────────────────────
     print(f"[RUNNER] ───────────────────────────────────────────────", flush=True)

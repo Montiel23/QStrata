@@ -4,8 +4,8 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-26  
 **Author:** Miguel Lopez (QStrata)  
-**Slice:** Q30 — Experiment Automation Framework Design  
-**Status:** DESIGN ONLY — implementation begins in Q31
+**Slice:** Q30 — Experiment Automation Framework Design; Q31A — formalized command block  
+**Status:** IMPLEMENTED (Q31); command block formalized (Q31A)
 
 ---
 
@@ -25,7 +25,7 @@ This document defines the YAML schema for QStrata experiment configs. All experi
 
 ## 2. Schema Overview
 
-The config is divided into six top-level sections: `experiment`, `dataset`, `model`, `training`, `metrics`, `artifacts`, and `reproducibility`. Each section is described below with field definitions, required status, and mutability rules.
+The config is divided into seven top-level sections: `experiment`, `dataset`, `model`, `training`, `metrics`, `artifacts`, `reproducibility`, and `command`. The `command` block was added in Q31 as a required field and formalized in Q31A. Each section is described below with field definitions, required status, and mutability rules.
 
 ---
 
@@ -118,6 +118,20 @@ reproducibility:
                        #   cuda_version: string
                        #   cpu_fallback: bool
                        #   gpu_memory_mb: int
+
+command:
+  executable:          # REQUIRED string: subprocess executable name or path
+                       # e.g. "python3", "bash"
+                       # The runner invokes [executable] + args as a subprocess
+                       # Use "python3" (not "python") for containers where only python3 is in PATH
+  args:                # REQUIRED list of strings: script path and arguments
+                       # e.g.
+                       #   - scripts/smoke_test_vindr_cv_binary.py
+                       #   - --root
+                       #   - data/processed/vindr_binary_roi_224
+                       #   - --seed
+                       #   - "42"
+                       # All args must be strings; numeric values must be quoted
 ```
 
 ---
@@ -275,7 +289,59 @@ The result is stored as `reproducibility.git_commit` in the experiment metadata.
 
 ---
 
-## 8. Scientific Integrity Requirements
+## 8. Command Block (Formalized in Q31A)
+
+The `command` block is a required top-level section in all runner-executed experiment configs. It was introduced in Q31 and formalized as a first-class required schema field in Q31A.
+
+```yaml
+command:
+  executable: python3       # required
+  args:                     # required list of strings
+    - scripts/my_script.py
+    - --arg1
+    - value1
+```
+
+### Purpose
+
+The `command` block decouples the runner from model-specific logic. The runner does not inspect or interpret the command; it executes `[executable] + args` as a subprocess, captures stdout/stderr, and records the return code. This design means:
+
+- The runner can wrap any script (smoke tests, training scripts, evaluation scripts, NAS trial executors) without modification
+- NAS trial generation (Q32+) produces valid `command` blocks programmatically; the runner executes them identically to hand-crafted configs
+- Model and ansatz code changes never require runner changes
+
+### Required Fields
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `command.executable` | Yes | string | Executable name or path; use `python3` for containers |
+| `command.args` | Yes | list of strings | Script path + arguments; all values must be strings |
+
+### NAS Compatibility
+
+NAS trial generation (Q32, Q33, Q34) populates `command.args` with the appropriate training script and the trial-specific hyperparameters passed as CLI arguments. The runner does not need modification to execute NAS-generated commands.
+
+**Example NAS trial command block:**
+```yaml
+command:
+  executable: python3
+  args:
+    - scripts/train_vindr_cv_binary.py
+    - --n-modes
+    - "4"
+    - --cv-depth
+    - "2"
+    - --seed
+    - "42"
+```
+
+### Container Compatibility Note
+
+The `docker-qstrata-gpu` container has `python3` in PATH but not `python`. All experiment configs targeting this container must use `executable: python3`.
+
+---
+
+## 9. Scientific Integrity Requirements
 
 **All hyperparameters that affect results must appear in the config.** There are no environment-variable-only overrides. There are no implicit defaults that differ from the documented schema defaults. If a value affects any metric in any way, it must be in `model.parameters` or another tracked field.
 
@@ -288,7 +354,8 @@ The result is stored as `reproducibility.git_commit` in the experiment metadata.
 ---
 
 ```
-Schema version: 1.0 (Q30 design)
-Implementation target: Q31
+Schema version: 1.1 (Q31A — command block formalized)
+Implemented: Q31
+Hardened: Q31A (command block, env var git fallback)
 NAS compatibility: Q32 (classical), Q33 (DV/CV quantum), Q34 (multi-objective)
 ```

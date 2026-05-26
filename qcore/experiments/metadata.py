@@ -1,7 +1,7 @@
 """
 qcore/experiments/metadata.py
 
-Experiment metadata capture utilities for the QStrata experiment runner (Q31 MVP).
+Experiment metadata capture utilities for the QStrata experiment runner.
 
 Functions:
     generate_experiment_id() → str
@@ -9,11 +9,32 @@ Functions:
 
     capture_git_commit() → dict
         Records the current HEAD commit and dirty-tree flag.
-        Returns {"commit": "unknown", "dirty": True} on any failure.
+        Priority order for commit SHA:
+          1. QSTRATA_GIT_COMMIT environment variable (if non-empty)
+          2. `git rev-parse HEAD` subprocess
+          3. "unknown" fallback
+        Priority order for dirty flag:
+          1. QSTRATA_GIT_DIRTY environment variable ("true"/"false", case-insensitive)
+          2. `git diff --quiet` subprocess check
+          3. True (conservative fallback — assume dirty)
 
     capture_hardware() → dict
         Records GPU name, CUDA version, CPU fallback flag, and GPU memory.
         Gracefully handles environments where torch is unavailable.
+
+Environment variables:
+    QSTRATA_GIT_COMMIT  — inject commit SHA when git is unavailable (e.g., inside
+                          a Docker container without git installed).
+                          Recommended usage:
+                            docker compose exec \\
+                              -e QSTRATA_GIT_COMMIT=$(git rev-parse HEAD) \\
+                              -e QSTRATA_GIT_DIRTY=false \\
+                              qstrata-gpu \\
+                              python3 scripts/run_experiment.py --config <path>
+
+    QSTRATA_GIT_DIRTY   — inject dirty-tree flag alongside QSTRATA_GIT_COMMIT.
+                          Accepts "true" or "false" (case-insensitive).
+                          If omitted when QSTRATA_GIT_COMMIT is set, defaults to False.
 """
 
 from __future__ import annotations
@@ -42,14 +63,41 @@ def capture_git_commit() -> dict:
     """
     Capture the current HEAD commit SHA and dirty-tree status.
 
+    Priority order for commit SHA:
+        1. QSTRATA_GIT_COMMIT env var — checked first; used if non-empty
+        2. git rev-parse HEAD — run as subprocess if git is available
+        3. "unknown" — final fallback
+
+    Priority order for dirty flag:
+        1. QSTRATA_GIT_DIRTY env var — "true"/"false" (case-insensitive)
+        2. git diff --quiet + git diff --cached --quiet subprocess checks
+        3. True (conservative: assume dirty if nothing else can determine it)
+
+    When QSTRATA_GIT_COMMIT is set but QSTRATA_GIT_DIRTY is absent, the dirty
+    flag defaults to False (caller opted in to env-var injection, implying a
+    clean commit was intentionally provided).
+
     Returns:
         dict with keys:
-            "commit" (str): full 40-char SHA, or "unknown" on failure
+            "commit" (str):  full SHA or "unknown"
             "dirty"  (bool): True if working tree or index has uncommitted changes
-
-    On any subprocess failure (git not installed, not in a repo, etc.),
-    returns {"commit": "unknown", "dirty": True} to flag reproducibility risk.
     """
+    env_commit = os.environ.get("QSTRATA_GIT_COMMIT", "").strip()
+    env_dirty  = os.environ.get("QSTRATA_GIT_DIRTY",  "").strip().lower()
+
+    # ── Commit SHA ────────────────────────────────────────────────────────────
+    if env_commit:
+        commit = env_commit
+        # Dirty flag: use env var if present, else default to False (caller-provided commit)
+        if env_dirty in ("true", "1"):
+            dirty = True
+        elif env_dirty in ("false", "0"):
+            dirty = False
+        else:
+            dirty = False  # default when commit is injected but dirty not specified
+        return {"commit": commit, "dirty": dirty}
+
+    # ── Try git subprocess ────────────────────────────────────────────────────
     try:
         commit = subprocess.check_output(
             ["git", "rev-parse", "HEAD"],
@@ -70,7 +118,10 @@ def capture_git_commit() -> dict:
         return {"commit": commit, "dirty": dirty}
 
     except Exception:
-        return {"commit": "unknown", "dirty": True}
+        pass
+
+    # ── Final fallback ────────────────────────────────────────────────────────
+    return {"commit": "unknown", "dirty": True}
 
 
 def capture_hardware() -> dict:
@@ -90,9 +141,9 @@ def capture_hardware() -> dict:
         import torch
 
         if torch.cuda.is_available():
-            gpu_model    = torch.cuda.get_device_name(0)
-            cuda_version = torch.version.cuda or "N/A"
-            cpu_fallback = False
+            gpu_model     = torch.cuda.get_device_name(0)
+            cuda_version  = torch.version.cuda or "N/A"
+            cpu_fallback  = False
             gpu_memory_mb = (
                 torch.cuda.get_device_properties(0).total_memory // (1024 ** 2)
             )

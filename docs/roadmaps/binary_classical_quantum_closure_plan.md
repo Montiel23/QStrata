@@ -77,8 +77,8 @@ Binary closure is complete only when both datasets have finished both model type
 | Q25 | Continuous-Variable Binary Feasibility Design | COMPLETE |
 | Q25A | Roadmap Prioritization and Experiment Automation Planning | COMPLETE |
 | Q26 | Continuous-Variable Binary Smoke Test | COMPLETE |
-| Q27 | Continuous-Variable Binary Full Training | NEXT |
-| Q28 | DV vs CV Binary Comparative Report | PLANNED |
+| Q27 | Continuous-Variable Binary Full Training | COMPLETE |
+| Q28 | DV vs CV Binary Comparative Report | NEXT |
 | Q29 | Binary Quantum Release Tagging | PLANNED |
 | — | **VinDr CV binary benchmarking** | **PENDING** |
 | — | **Overall VinDr binary quantum benchmarking** | **IN PROGRESS** |
@@ -106,8 +106,8 @@ No automation, NAS, or distributed infrastructure work should begin before this 
 | Slice | Description | Status |
 |---|---|---|
 | Q26 | CV Binary Smoke Test | COMPLETE — PASS (2026-05-26) |
-| Q27 | CV Binary Full Training | NEXT |
-| Q28 | DV vs CV Binary Comparative Report | PLANNED |
+| Q27 | CV Binary Full Training | COMPLETE — PASS (2026-05-26) |
+| Q28 | DV vs CV Binary Comparative Report | NEXT |
 | Q29 | Binary Quantum Release Tagging | PLANNED |
 
 **Q26 — Confirmed results (from `reports/q26_cv_binary_smoke_test.md`):**
@@ -124,6 +124,24 @@ No automation, NAS, or distributed infrastructure work should begin before this 
 | Health checks | 14 / 14 PASS | ✓ |
 | Gradient flow | compression, ansatz, readout all received non-zero gradient | ✓ |
 | Backbone frozen | zero gradient confirmed | ✓ |
+
+**Q27 — Confirmed results (from `reports/q27_cv_binary_full_training.md`):**
+
+| Metric | Value |
+|---|---|
+| Epochs run | 15 of 15 (max epochs reached) |
+| Best epoch | 15 |
+| Best val AUROC | 0.6946 |
+| Best val F1 | 0.6382 |
+| Best val loss | 0.6440 |
+| Test AUROC | 0.6708 |
+| Test F1 | 0.6283 |
+| Test Accuracy | 65.77% |
+| Test Confusion | [[765, 305], [406, 601]] (non-degenerate) |
+| CV health (all 15 epochs) | COV_PSD PASS, COV_SYMMETRIC PASS, QUAD_FINITE PASS, NO_NAN_INF PASS |
+| Latency | 2.15 ms/sample (100 single-sample passes, CUDA backbone + CPU CV) |
+| Trainable params | 536 |
+| Verdict | CV_BINARY_FULL_TRAINING: PASS |
 
 ---
 
@@ -289,7 +307,8 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [x] **Q25** (CV binary feasibility design) is completed
 - [x] **Q25A** (Roadmap prioritization and automation planning) is completed
 - [x] **Q26** (CV binary smoke test) is completed — PASS (2026-05-26)
-- [ ] **Q27–Q28** (VinDr CV binary benchmarking) is completed — IN PROGRESS
+- [x] **Q27** (CV binary full training) is completed — PASS (2026-05-26): Test AUROC 0.6708
+- [ ] **Q28** (DV vs CV binary comparative report) is completed — NEXT
 - [ ] **Q29** (Binary Quantum Release Tagging) is completed — PENDING
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
 - [x] VinDr-SpineXR DV hybrid full baseline with random backbone (Q19) is completed
@@ -329,26 +348,27 @@ No resources or design work should be allocated to multiclass items until Q29 is
 ## 8. Immediate Next Action
 
 VinDr **DV** binary phase is **CLOSED** (Q23 complete).
-VinDr **CV** binary phase is **IN PROGRESS** — Q26 smoke test **PASSED** (2026-05-26).
-Q27 (CV Binary Full Training) is the immediate next slice.
+VinDr **CV** binary phase is **IN PROGRESS** — Q26 PASS, Q27 **PASS** (2026-05-26).
+Q28 (DV vs CV Binary Comparative Report) is the immediate next slice.
 
 ```
-Run:
-Slice Q27 — Continuous-Variable Binary Full Training
+Execute:
+Slice Q28 — DV vs CV Binary Comparative Report
 
 Goal:
-Train the validated CV pipeline (Q26-confirmed architecture) on VinDr-SpineXR binary
-for 15 epochs and produce the first valid CV hybrid benchmark result:
-  - Same dataset splits, seed, LR, optimizer, and backbone as Q21/Q22
-  - GaussianVariationalAnsatz(n_modes=2, depth=1, squeezing_cap=1.5)
-  - GaussianBackend(n_modes=2, hbar=2.0, device='cpu')
-  - First-moment readout: mu_final → nn.Linear(4, 2) → binary logits
-  - 536 trainable parameters (confirmed by Q26)
-  - Per-epoch: train loss, val AUROC/F1, CV gradient norms, backbone gradient check
+Formal scientific comparison of DV hybrid (Q21), CV hybrid (Q27), and classical
+controls (Q17, Q22) on VinDr-SpineXR binary classification.
+
+Key results to compare:
+  Q17 Classical:     Test AUROC 0.6224, F1 0.5355, params 23,650
+  Q21 DV Hybrid:     Test AUROC 0.6800, F1 0.6159, params 574
+  Q22 Tiny Classical: Test AUROC 0.6625, F1 0.5961, params 526
+  Q27 CV Hybrid:     Test AUROC 0.6708, F1 0.6283, params 536
 
 References:
-  Q26 smoke test:  reports/q26_cv_binary_smoke_test.md
-  Q25 design:      reports/q25_cv_binary_feasibility_design.md
-  Q21 script:      scripts/train_vindr_dv_hybrid_pretrained.py
-  Q26 script:      scripts/smoke_test_vindr_cv_binary.py  (architecture reference)
+  Q27 results:  reports/q27_cv_binary_full_training.md
+  Q23 report:   reports/vindr_binary_comparative_report.md
+  Q21 results:  reports/vindr_dv_hybrid_pretrained_full_training.md
+  Q22 results:  reports/vindr_classical_control_tiny_head.md
+  Q17 results:  reports/vindr_classical_baseline_full_training.md
 ```

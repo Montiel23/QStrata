@@ -192,7 +192,13 @@ This will restore the exact versions of all scripts, reports, roadmap, and `qcor
 
 **Frozen reports as sufficient scientific records.** The frozen reports (Section 4) contain exact per-epoch metrics, confusion matrices, gradient health logs (for Q21), and CV health metrics (for Q27). These records are sufficient to reconstruct the scientific interpretation of the benchmarking phase without re-running any experiment. The interpretation in Q28 was derived from these records only; no value was filled from memory.
 
-**Gating discipline enforced.** The roadmap gating structure — NAS blocked until Q29, multiclass blocked until Q29 — enforced sequential validation rather than premature scaling. This discipline is documented here as part of the reproducibility record. The decision to gate automation and search work until the scientific baseline was formally closed was made at Q25A and upheld through Q26, Q27, Q27A, Q28, and this slice. Future work inherits this precedent: scientific validation before automation.
+**Gating discipline enforced and carried forward.** The roadmap gating structure enforced sequential validation rather than premature scaling. The decision to gate automation and search work until the scientific baseline was formally closed was made at Q25A and upheld through Q26, Q27, Q27A, Q28, and this slice. The following gates remain active beyond Q29:
+
+- **NAS remains gated behind automation readiness (Q31).** Local NAS (Q32–Q34) is conditional-ready only after the experiment runner (Q31) is complete and validated. Running NAS without a reproducible runner would produce results that are difficult to re-verify or extend.
+- **AWS/Ray distributed scaling remains gated behind validated local NAS.** Q35 (distributed scaling design) does not begin until Q34 (local multi-objective NAS pilot) produces validated results. Infrastructure is not provisioned before the procedure it runs is confirmed sound.
+- **Multiclass remains gated behind the full optimized binary release (Phases 3–5).** Multiclass benchmarking does not begin until Phase 3 (classical NAS ceiling, Q32), Phase 4 (quantum NAS, Q33), and Phase 5 (optimized binary release, Q34) are all complete. Starting multiclass before the binary optimization phase produces comparison-point instability — the binary reference floor would still be the unoptimized Q17/Q21/Q22/Q27 values, not the post-NAS optimized baselines.
+
+This discipline is documented here and carried forward as binding constraints.
 
 **Single-seed caveat is explicit and forward-looking.** All four benchmark models used seed 42 and a single training run. This is documented in every relevant report. It is a known limitation that has been explicitly carried forward into the limitations sections of Q23, Q28, and this report. Multi-seed evaluation is identified as the highest-priority next step for any future work that seeks to draw architectural conclusions from the observed deltas.
 
@@ -228,13 +234,16 @@ With Q29 complete, the Q30–Q35 optimization and NAS phase is unblocked. The tr
 
 | Phase | Status |
 |---|---|
-| VinDr-SpineXR binary benchmarking (Q17–Q29) | **CLOSED** |
-| NAS phase (Q30–Q35) | NEXT — unblocked by Q29; Q30 is immediate next slice |
-| Multiclass phase | BLOCKED — pending future roadmap progression after Q29; multiclass slices may now be scheduled |
-| PneumoniaMNIST comparative report (P21) | TODO — not yet scheduled |
-| Global binary benchmark summary (R-FINAL) | TODO — deferred until PneumoniaMNIST comparative (P21) complete |
+| Binary benchmarking phase (Q17–Q29) | **CLOSED** |
+| Local NAS (Q32–Q34) | CONDITIONAL READY — after Q31 (experiment automation) is complete |
+| AWS/Ray distributed scaling (Q35) | BLOCKED — until validated local NAS (Q34) exists |
+| Multiclass phase | BLOCKED — until Phase 3 (classical ceiling, Q32), Phase 4 (quantum NAS, Q33), and Phase 5 (optimized binary release, Q34) are all complete |
 
-The binary benchmarking phase covers VinDr-SpineXR only. PneumoniaMNIST binary comparative work (P21) and the global summary (R-FINAL) remain on the TODO list and are not blocked, but are also not the immediate execution priority. Q30 is the immediate next slice.
+These statuses are precise:
+
+- **Local NAS is not unconditionally unblocked.** Q29 removes the binary-closure gate on the automation phase. But NAS itself (Q32–Q34) requires the experiment runner (Q31) to be complete first. Running NAS without reproducible infrastructure produces results that cannot be reliably reproduced or extended. Q30 → Q31 → Q32 sequencing is hard.
+- **AWS/Ray is specifically gated on local NAS results.** Q35 designs distributed scaling only after Q34 validates that the NAS procedure is sound and cost-effective on a single GPU. No cloud infrastructure is provisioned before that validation.
+- **Multiclass requires Phases 3–5, not just Q29.** Phase 3 = classical NAS ceiling (Q32). Phase 4 = quantum NAS (Q33). Phase 5 = optimized binary release (Q34). Multiclass evaluation against an unoptimized binary baseline would produce results that need to be re-evaluated after NAS. The correct sequencing is: optimize binary baselines first, then evaluate multiclass against the optimized reference floor.
 
 ---
 
@@ -253,6 +262,7 @@ Q29 status: COMPLETE
 Binary benchmarking phase: CLOSED
 Git tags created: qstrata-vindr-dv-binary-v1, qstrata-vindr-cv-binary-v1, qstrata-vindr-binary-comparative-v1
 Q30 status: NEXT — Experiment Automation Framework Design
-NAS/AWS/Ray: unblocked (Q30 is gate)
-Multiclass: unblocked (scheduling pending)
+Local NAS (Q32–Q34): CONDITIONAL READY after Q31
+AWS/Ray distributed scaling (Q35): BLOCKED until validated local NAS (Q34) exists
+Multiclass: BLOCKED until Phase 3 (Q32), Phase 4 (Q33), Phase 5 (Q34) complete
 ```

@@ -85,8 +85,8 @@ Binary closure is complete only when both datasets have finished both model type
 | — | **Overall VinDr binary quantum benchmarking** | **CLOSED** |
 | P21 | PneumoniaMNIST Classical vs DV Hybrid Comparative Report | TODO |
 | R-FINAL | Global Binary Benchmark Technical Summary | TODO |
-| — | **NEXT PHASE — Optimization / NAS** | **UNBLOCKED — Q30 is NEXT** |
-| — | **NEXT PHASE — Multiclass benchmarking** | **UNBLOCKED — scheduling pending** |
+| — | **NEXT PHASE — Optimization / NAS** | **Q30 NEXT; local NAS conditional on Q31; AWS/Ray blocked until Q34** |
+| — | **NEXT PHASE — Multiclass benchmarking** | **BLOCKED — requires Phase 3 (Q32), 4 (Q33), 5 (Q34)** |
 
 **Slice descriptions — CV binary phase:**
 
@@ -150,10 +150,11 @@ No automation, NAS, or distributed infrastructure work begins before Q29 is comp
 
 ## 3c. Future Experiment Automation Phase
 
-All slices in this phase are **PLANNED**.
-Q29 is now complete — this phase is **UNBLOCKED**. Q30 is the immediate next slice.
+All slices in this phase are **PLANNED** except Q30 which is **NEXT**.
+Q29 is complete — Q30 is now unblocked. Local NAS (Q32–Q34) is CONDITIONAL READY after Q31.
 
-The gating condition has been met: Q29 (Binary Quantum Release Tagging) is COMPLETE (2026-05-26).
+The binary-closure gate has been met: Q29 (Binary Quantum Release Tagging) is COMPLETE (2026-05-26).
+NAS and AWS/Ray work has additional internal gates; see Section 3d.
 
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
@@ -177,23 +178,30 @@ The gating condition has been met: Q29 (Binary Quantum Release Tagging) is COMPL
 
 ## 3d. NAS / AWS / Ray Gating Rules
 
-NAS, AWS, and Ray work was **BLOCKED** until ALL of the following were complete:
+**Binary-closure gate** — all four conditions now satisfied:
 
 - Q26: CV binary smoke test **PASSES** — ✓ COMPLETE (2026-05-26)
 - Q27: CV binary full training **COMPLETE** — ✓ COMPLETE (2026-05-26)
 - Q28: DV vs CV binary comparative analysis **COMPLETE** — ✓ COMPLETE (2026-05-26)
 - Q29: Binary quantum release tagging **COMPLETE** — ✓ COMPLETE (2026-05-26)
 
-**Gate cleared.** All four conditions are now satisfied. NAS, AWS, and Ray work is UNBLOCKED. Q30 is the immediate next slice.
+The binary-closure gate is cleared. Q30 (Experiment Automation Framework Design) is the immediate next slice.
 
-**Reason:** Do not automate search before the CV baseline is scientifically validated and
-binary benchmarking is formally closed. Premature scaling increases uncertainty and wastes
-resources. NAS requires a validated baseline to define meaningful search bounds, evaluation
-criteria, and stopping conditions.
+**Remaining internal gates (still active):**
 
-**Additional gate — Q35:** AWS / Ray distributed scaling is additionally blocked until Q34
-(local multi-objective NAS pilot) is complete and validated. Distributed infrastructure must
-not be provisioned before local NAS confirms the search procedure is sound.
+| Work | Status | Gate condition |
+|---|---|---|
+| Q30 — Automation Framework Design | **NEXT** | Binary closure ✓ |
+| Q31 — Local GPU Runner | PLANNED | Q30 complete |
+| Q32–Q34 — Local NAS | CONDITIONAL READY | Q31 (experiment runner) complete |
+| Q35 — AWS/Ray Distributed Design | **BLOCKED** | Q34 (local NAS validated) complete |
+| Multiclass benchmarking | **BLOCKED** | Phase 3 (Q32), Phase 4 (Q33), Phase 5 (Q34) all complete |
+
+**Why NAS is conditional, not unconditional:** Local NAS (Q32–Q34) requires Q31's reproducible experiment runner to be complete before search trials begin. NAS results produced without a validated runner cannot be reliably reproduced or extended. Q30 → Q31 → Q32 sequencing is hard.
+
+**Why AWS/Ray stays blocked:** Q35 designs distributed scaling only after Q34 confirms the NAS procedure is sound on a single GPU. No cloud infrastructure is provisioned before that validation.
+
+**Why multiclass stays blocked:** Multiclass evaluation against the current unoptimized binary baselines (Q17/Q21/Q22/Q27) would require re-evaluation after NAS produces optimized reference baselines. The correct sequencing is: Phase 3 (classical ceiling) → Phase 4 (quantum NAS) → Phase 5 (optimized binary release) → multiclass.
 
 ---
 
@@ -268,14 +276,20 @@ Tags must not be created until all required slices in each phase are complete.
 
 ## 3g. Multiclass Phase Gate
 
-**Status: UNBLOCKED — all binary phase prerequisites are now complete.**
+**Status: BLOCKED — binary phase prerequisites are met, but optimization phases must complete first.**
 
+Binary closure prerequisites (all met):
 - VinDr DV binary benchmarking (Q17–Q23): **CLOSED** ✓
 - VinDr CV binary benchmarking (Q25–Q28): **CLOSED** ✓ (2026-05-26)
 - DV vs CV binary comparative report (Q28): **COMPLETE** ✓ (2026-05-26)
 - Binary quantum release tagging (Q29): **COMPLETE** ✓ (2026-05-26)
 
-Multiclass benchmarking may now be scheduled. The immediate execution priority remains Q30 (Experiment Automation Framework Design). Multiclass slices should be planned in parallel but not executed before Q30 design is complete.
+Remaining gates before multiclass begins:
+- Phase 3 — Classical NAS ceiling (Q32): **PLANNED**
+- Phase 4 — Quantum NAS (Q33): **PLANNED**
+- Phase 5 — Optimized binary release (Q34): **PLANNED**
+
+Multiclass benchmarking must not begin until the optimized binary reference baselines exist (post-Q34). Starting multiclass against the current unoptimized baselines (Q17 AUROC 0.6224, Q21 AUROC 0.6800, Q22 AUROC 0.6625, Q27 AUROC 0.6708) would require re-evaluation after NAS produces stronger references. The comparison point must be stable before multiclass begins.
 
 ---
 
@@ -403,14 +417,14 @@ A dataset's comparative report is only valid if both the classical and DV hybrid
 
 ## 7. Deferred Work
 
-### Multiclass (unblocked — scheduling pending)
+### Multiclass (BLOCKED — requires Phases 3, 4, and 5)
 
-Q29 is now complete. Multiclass benchmarking may be scheduled. Immediate execution priority is Q30.
+Q29 is complete but multiclass benchmarking remains blocked. It requires Phase 3 (classical NAS ceiling, Q32), Phase 4 (quantum NAS, Q33), and Phase 5 (optimized binary release, Q34) before it can start.
 
 | Item | Dataset | Status |
 |---|---|---|
-| PathMNIST multiclass | PathMNIST | Unblocked — scheduling pending |
-| VinDr-SpineXR multiclass | VinDr-SpineXR | Unblocked — scheduling pending |
+| PathMNIST multiclass | PathMNIST | BLOCKED — requires Phase 3 (Q32), 4 (Q33), 5 (Q34) |
+| VinDr-SpineXR multiclass | VinDr-SpineXR | BLOCKED — requires Phase 3 (Q32), 4 (Q33), 5 (Q34) |
 
 ### Continuous-Variable Quantum — Closed
 

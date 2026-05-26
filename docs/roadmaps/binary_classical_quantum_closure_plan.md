@@ -79,10 +79,10 @@ Binary closure is complete only when both datasets have finished both model type
 | Q26 | Continuous-Variable Binary Smoke Test | COMPLETE |
 | Q27 | Continuous-Variable Binary Full Training | COMPLETE |
 | Q27A | NAS Strategy and Optimization Phase Refinement | COMPLETE |
-| Q28 | DV vs CV Binary Comparative Report | NEXT |
-| Q29 | Binary Quantum Release Tagging | PLANNED |
-| — | **VinDr CV binary benchmarking** | **PENDING** |
-| — | **Overall VinDr binary quantum benchmarking** | **IN PROGRESS** |
+| Q28 | DV vs CV Binary Comparative Report | COMPLETE |
+| Q29 | Binary Quantum Release Tagging | NEXT |
+| — | **VinDr CV binary benchmarking** | **CLOSED** |
+| — | **Overall VinDr binary quantum benchmarking** | **PENDING Q29 RELEASE TAG** |
 | P21 | PneumoniaMNIST Classical vs DV Hybrid Comparative Report | TODO |
 | R-FINAL | Global Binary Benchmark Technical Summary | TODO |
 | — | **NEXT PHASE — Multiclass benchmarking** | **BLOCKED until Q29 complete** |
@@ -102,15 +102,15 @@ Binary closure is complete only when both datasets have finished both model type
 
 ## 3b. Immediate Scientific Priorities
 
-The following four slices are the exclusive execution focus until Q28 is complete.
-No automation, NAS, or distributed infrastructure work should begin before this block is done.
+The following four slices were the exclusive execution focus. Q26, Q27, Q27A, and Q28 are now complete.
+No automation, NAS, or distributed infrastructure work begins before Q29 is complete.
 
 | Slice | Description | Status |
 |---|---|---|
 | Q26 | CV Binary Smoke Test | COMPLETE — PASS (2026-05-26) |
 | Q27 | CV Binary Full Training | COMPLETE — PASS (2026-05-26) |
-| Q28 | DV vs CV Binary Comparative Report | NEXT |
-| Q29 | Binary Quantum Release Tagging | PLANNED |
+| Q28 | DV vs CV Binary Comparative Report | COMPLETE (2026-05-26) |
+| Q29 | Binary Quantum Release Tagging | NEXT |
 
 **Q26 — Confirmed results (from `reports/q26_cv_binary_smoke_test.md`):**
 
@@ -383,8 +383,8 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [x] **Q26** (CV binary smoke test) is completed — PASS (2026-05-26)
 - [x] **Q27** (CV binary full training) is completed — PASS (2026-05-26): Test AUROC 0.6708
 - [x] **Q27A** (NAS strategy and optimization phase refinement) is completed — COMPLETE (2026-05-26)
-- [ ] **Q28** (DV vs CV binary comparative report) is completed — NEXT
-- [ ] **Q29** (Binary Quantum Release Tagging) is completed — PENDING
+- [x] **Q28** (DV vs CV binary comparative report) is completed — COMPLETE (2026-05-26)
+- [ ] **Q29** (Binary Quantum Release Tagging) is completed — NEXT
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
 - [x] VinDr-SpineXR DV hybrid full baseline with random backbone (Q19) is completed
 - [x] VinDr-SpineXR DV hybrid full baseline with pretrained backbone (Q21) is completed
@@ -423,28 +423,35 @@ No resources or design work should be allocated to multiclass items until Q29 is
 ## 8. Immediate Next Action
 
 VinDr **DV** binary phase is **CLOSED** (Q23 complete).
-VinDr **CV** binary phase is **IN PROGRESS** — Q26 PASS, Q27 **PASS** (2026-05-26).
+VinDr **CV** binary phase is **CLOSED** — Q26 PASS, Q27 PASS, Q28 **COMPLETE** (2026-05-26).
 Q27A (NAS Strategy and Optimization Phase Refinement) is **COMPLETE** (2026-05-26).
-Q28 (DV vs CV Binary Comparative Report) is the immediate next slice.
+Q28 (DV vs CV Binary Comparative Report) is **COMPLETE** (2026-05-26).
+Q29 (Binary Quantum Release Tagging) is the immediate next slice.
+
+**Q28 — Confirmed results (from `reports/q28_dv_vs_cv_binary_comparative_report.md`):**
+
+| Model | AUROC | F1 | Accuracy | Params |
+|---|---|---|---|---|
+| Q17 Classical | 0.6224 | 0.5355 | 60.66% | 23,650 |
+| Q21 DV Hybrid | 0.6800 | 0.6159 | 63.84% | 574 |
+| Q22 Tiny Classical Control | 0.6625 | 0.5961 | 64.37% | 526 |
+| Q27 CV Hybrid | 0.6708 | 0.6283 | 65.77% | 536 |
+
+**Key finding:** Compact bottleneck with frozen pretrained backbone is the dominant contributor to improvement over Q17. DV and CV hybrids both exceed the parameter-matched classical control (Q22) by small margins (+0.0175 and +0.0083 AUROC respectively). No quantum advantage is claimed.
 
 ```
 Execute:
-Slice Q28 — DV vs CV Binary Comparative Report
+Slice Q29 — Binary Quantum Release Tagging
 
 Goal:
-Formal scientific comparison of DV hybrid (Q21), CV hybrid (Q27), and classical
-controls (Q17, Q22) on VinDr-SpineXR binary classification.
+Formally close the VinDr binary quantum benchmarking program with release tags:
+  vindr-binary-dv-v1       — VinDr DV binary phase (Q17–Q23)
+  vindr-binary-cv-v1       — VinDr CV binary phase (Q25–Q28)
+  vindr-binary-complete-v1 — Full VinDr binary quantum program (Q17–Q28)
 
-Key results to compare:
-  Q17 Classical:     Test AUROC 0.6224, F1 0.5355, params 23,650
-  Q21 DV Hybrid:     Test AUROC 0.6800, F1 0.6159, params 574
-  Q22 Tiny Classical: Test AUROC 0.6625, F1 0.5961, params 526
-  Q27 CV Hybrid:     Test AUROC 0.6708, F1 0.6283, params 536
-
-References:
-  Q27 results:  reports/q27_cv_binary_full_training.md
-  Q23 report:   reports/vindr_binary_comparative_report.md
-  Q21 results:  reports/vindr_dv_hybrid_pretrained_full_training.md
-  Q22 results:  reports/vindr_classical_control_tiny_head.md
-  Q17 results:  reports/vindr_classical_baseline_full_training.md
+Prerequisites (all confirmed):
+  Q23 COMPLETE — VinDr DV binary closure
+  Q26 COMPLETE — CV smoke test PASS
+  Q27 COMPLETE — CV full training PASS
+  Q28 COMPLETE — DV vs CV comparative report
 ```

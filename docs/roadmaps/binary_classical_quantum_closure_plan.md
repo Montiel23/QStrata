@@ -55,7 +55,7 @@ Binary closure is complete only when both datasets have finished both model type
 | DV hybrid smoke test | DONE |
 | DV hybrid full baseline (random backbone) | DONE |
 | Pretrained-backbone feasibility | DONE |
-| DV hybrid full baseline (pretrained backbone) | NEXT |
+| DV hybrid full baseline (pretrained backbone) | DONE |
 | Comparative report | TODO |
 
 ---
@@ -69,8 +69,8 @@ Binary closure is complete only when both datasets have finished both model type
 | Q18 | VinDr-SpineXR DV Hybrid Smoke Test | DONE |
 | Q19 | VinDr-SpineXR DV Hybrid Full Training (random backbone) | DONE |
 | Q20 | VinDr-SpineXR DV Hybrid Pretrained-Backbone Feasibility | DONE |
-| Q21 | VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training | NEXT |
-| Q22 | VinDr-SpineXR Classical vs DV Hybrid Comparative Report | TODO |
+| Q21 | VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training | DONE |
+| Q22 | VinDr-SpineXR Classical vs DV Hybrid Comparative Report | NEXT |
 | P21 | PneumoniaMNIST Classical vs DV Hybrid Comparative Report | TODO |
 | R-FINAL | Global Binary Benchmark Technical Summary | TODO |
 
@@ -176,11 +176,11 @@ Binary closure is complete when **ALL** of the following conditions are true:
 
 - [ ] **P21** (PneumoniaMNIST Classical vs DV Hybrid Comparative Report) is completed
 - [x] **Q20** (VinDr-SpineXR DV Hybrid Pretrained-Backbone Feasibility) is completed
-- [ ] **Q21** (VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training) is completed
+- [x] **Q21** (VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training) is completed
 - [ ] **Q22** (VinDr-SpineXR Classical vs DV Hybrid Comparative Report) is completed
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
 - [x] VinDr-SpineXR DV hybrid full baseline with random backbone (Q19) is completed
-- [ ] VinDr-SpineXR DV hybrid full baseline with pretrained backbone (Q21) is completed
+- [x] VinDr-SpineXR DV hybrid full baseline with pretrained backbone (Q21) is completed
 - [ ] **R-FINAL** (Global Binary Benchmark Technical Summary) is completed
 - [ ] No multiclass work has been started prematurely
 - [ ] No continuous-variable quantum work has been started prematurely
@@ -217,15 +217,18 @@ No resources or design work should be allocated to deferred items until the Defi
 
 ```
 Run:
-Slice Q21 — VinDr-SpineXR DV Hybrid Pretrained-Backbone Full Training
+Slice Q22 — VinDr-SpineXR Classical vs DV Hybrid Comparative Report
 
 Goal:
-Run full DV hybrid training on VinDr-SpineXR using checkpoints/c006_d040_classical_anchor.pt
-as the frozen pretrained feature extractor. This provides a scientifically valid DV
-baseline for the Q22 comparative report.
+Produce the VinDr-SpineXR binary comparative report comparing:
+  - Q17 classical baseline (CNN3Block, [16,32,64], 23,650 params, AUROC 0.6224, F1 0.5355)
+  - Q21 DV hybrid pretrained baseline (DVHybridCNNQNN, 574 trainable, AUROC 0.6800, F1 0.6159)
+
+Apply the Q20 interpretation guardrail: do NOT claim quantum advantage. The Q17 classical
+baseline may be architecturally weak (missing inter-block MaxPool). A valid architectural
+ablation must be noted before any architecture-level conclusion is drawn.
 ```
 
-Pretrained backbone: `checkpoints/c006_d040_classical_anchor.pt`  
-Dataset root: `data/processed/vindr_binary_roi_224/`  
-Architecture: DVHybridCNNQNN, depthwise_sep [64,128], n_qubits=4, depth=1, alpha=0.1  
-Expected trainable params: 574 (projection 516 + theta 24 + readout 34)
+Q17 reference: `reports/vindr_classical_baseline.md`  
+Q21 reference: `reports/vindr_dv_hybrid_pretrained_full_training.md`  
+Q20 guardrail: See Section 5c of this roadmap

@@ -1,0 +1,57 @@
+experiment:
+  phase: q31_runner_smoke
+  description: Q31 local runner smoke test using existing Q26 CV binary smoke script
+dataset:
+  name: vindr_binary_roi_224
+  split: canonical_42
+  preprocessing: roi_224_grayscale
+model:
+  architecture: cv_hybrid_smoke
+  backbone: c006_d040_classical_anchor
+  backbone_frozen: true
+  head: CVGaussianHead
+  parameters:
+    n_modes: 2
+    cv_depth: 1
+    squeezing_cap: 1.5
+    compression_dim: 4
+training:
+  epochs: 0
+  batch_size: 4
+  optimizer: AdamW
+  learning_rate: 0.001
+  weight_decay: 0.0
+  loss: CrossEntropyLoss
+  class_weights: null
+  early_stopping:
+    enabled: false
+    monitor: null
+    patience: 0
+    mode: null
+metrics:
+  primary: smoke_pass
+  secondary:
+  - loss_finite
+  - logits_finite
+  - gradients_finite
+  - backbone_grad_absent
+artifacts:
+  save_best_checkpoint: false
+  save_final_checkpoint: false
+  save_confusion_matrix: false
+  save_roc_curve: false
+  export_per_epoch_metrics: false
+reproducibility:
+  seed: 42
+command:
+  executable: python3
+  args:
+  - scripts/smoke_test_vindr_cv_binary.py
+  - --root
+  - data/processed/vindr_binary_roi_224
+  - --checkpoint
+  - checkpoints/c006_d040_classical_anchor.pt
+  - --batch-size
+  - '4'
+  - --seed
+  - '42'

@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-26  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q30 COMPLETE — Q31 NEXT
+**Status:** Q31 COMPLETE — Q31A NEXT
 
 ---
 
@@ -70,10 +70,11 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
 | Q30 | Experiment Automation Framework Design | **COMPLETE** | Q29 ✓ |
-| Q31 | Local GPU Experiment Runner | **NEXT** | Q30 ✓ |
+| Q31 | Local GPU Experiment Runner MVP | **COMPLETE** | Q30 ✓ |
+| Q31A | Runner Reproducibility Test and Hardening | **NEXT** | Q31 ✓ |
 
 **Phase 2 gate:** Q29 complete ✓  
-**Phase 2 status:** Q30 complete; Q31 NEXT
+**Phase 2 status:** Q30 complete; Q31 complete; Q31A NEXT
 
 ### Phase 3 — Classical NAS Ceiling (PLANNED)
 
@@ -81,7 +82,7 @@ These values are frozen. Future comparative work must reference them explicitly.
 |---|---|---|---|
 | Q32 | NAS Search Space Design — Classical Feature Extractors | PLANNED | Q31 complete |
 
-**Phase 3 gate:** Q31 (local runner) must be complete  
+**Phase 3 gate:** Q31A (runner hardening) must be complete  
 **Phase 3 note:** Classical NAS always precedes quantum NAS. The classical ceiling defines the evaluation reference for all quantum head search.
 
 ### Phase 4 — Quantum NAS (PLANNED)
@@ -142,8 +143,9 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Gate | Status | Condition |
 |---|---|---|
 | Q30 complete | ✓ | Binary closure (Q29) |
-| Q31 complete | NEXT | Q30 complete |
-| Q32 unblocked | PLANNED | Q31 complete |
+| Q31 complete | ✓ | Q30 complete |
+| Q31A complete | NEXT | Q31 complete |
+| Q32 unblocked | PLANNED | Q31A complete |
 | Q33 unblocked | PLANNED | Q32 classical ceiling |
 | Q34 unblocked | PLANNED | Q33 quantum NAS |
 | Q35 unblocked | BLOCKED | Q34 local NAS validated |
@@ -183,22 +185,24 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 
 ## 5. Immediate Next Action
 
-**Q31 — Local GPU Experiment Runner**
+**Q31A — Runner Reproducibility Test and Hardening**
 
-Purpose: implement the automation framework designed in Q30. The runner must support YAML-driven execution, signal-based failure recovery, partial metric preservation, leaderboard generation, and reproducibility verification.
+Purpose: validate the Q31 runner by running the same config twice and confirming identical results within tolerance; resolve git capture in container; add signal handler skeleton; extend config schema to document the `command` block.
 
 Reference documents:
 - `docs/architecture/qstrata_experiment_automation_framework.md`
 - `docs/specs/qstrata_experiment_config_schema.md`
-- `reports/q30_experiment_automation_framework_design.md`
+- `reports/q31_local_gpu_experiment_runner_mvp.md`
 
-Gate: Q30 complete ✓
+Gate: Q31 complete ✓ (smoke PASS — experiment_id 20260526_222939_a508a2)
 
 ---
 
 ```
 Q30 status: COMPLETE
-Q31 status: NEXT
+Q31 status: COMPLETE — smoke PASS (experiment_id 20260526_222939_a508a2)
+Q31A status: NEXT — Runner Reproducibility Test and Hardening
+Q32 status: PLANNED — gated after Q31A
 Binary benchmarking phase: CLOSED
 Multiclass: BLOCKED (requires Phase 3 + 4 + 5)
 AWS/Ray: BLOCKED (requires Q34 local NAS validated)

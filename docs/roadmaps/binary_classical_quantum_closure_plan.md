@@ -75,6 +75,7 @@ Binary closure is complete only when both datasets have finished both model type
 | — | **VinDr DV binary benchmarking** | **CLOSED** |
 | Q24 | Roadmap Realignment for CV Binary Quantum Phase | COMPLETE |
 | Q25 | Continuous-Variable Binary Feasibility Design | COMPLETE |
+| Q25A | Roadmap Prioritization and Experiment Automation Planning | COMPLETE |
 | Q26 | Continuous-Variable Binary Smoke Test | NEXT |
 | Q27 | Continuous-Variable Binary Full Training | PLANNED |
 | Q28 | DV vs CV Binary Comparative Report | PLANNED |
@@ -89,6 +90,7 @@ Binary closure is complete only when both datasets have finished both model type
 
 - **Q24** — Roadmap Realignment for CV Binary Quantum Phase. Corrects roadmap to reflect DV binary closure only; inserts CV binary phase Q25–Q29 before multiclass. Documentation only.
 - **Q25** — Continuous-Variable Binary Feasibility Design. Design CV binary experiment architecture for VinDr-SpineXR. Covers Gaussian ansatz, quadrature outputs, moment-based readout, symplectic formalism, and QStrata-only integration. No training.
+- **Q25A** — Roadmap Prioritization and Experiment Automation Planning. Separated immediate scientific execution priorities from future automation priorities. Gated NAS, AWS, and Ray work until CV baseline is validated. Corrected Q26 assumptions from final Q25 design decisions.
 - **Q26** — Continuous-Variable Binary Smoke Test. Validate minimal CV pipeline with forward pass, gradient flow, numerical stability, probability sanity, and optimizer update verification.
 - **Q27** — Continuous-Variable Binary Full Training. Train CV binary hybrid benchmark on VinDr-SpineXR using validated CV pipeline.
 - **Q28** — DV vs CV Binary Comparative Report. Scientific comparison of DV hybrid, CV hybrid, and classical controls across VinDr binary benchmarks.
@@ -96,7 +98,68 @@ Binary closure is complete only when both datasets have finished both model type
 
 ---
 
-## 3b. Tagging Strategy
+## 3b. Immediate Scientific Priorities
+
+The following four slices are the exclusive execution focus until Q28 is complete.
+No automation, NAS, or distributed infrastructure work should begin before this block is done.
+
+| Slice | Description | Status |
+|---|---|---|
+| Q26 | CV Binary Smoke Test | NEXT |
+| Q27 | CV Binary Full Training | PLANNED |
+| Q28 | DV vs CV Binary Comparative Report | PLANNED |
+| Q29 | Binary Quantum Release Tagging | PLANNED |
+
+**Q26 — Technical assumptions (from Q25 final design):**
+
+| Parameter | Value |
+|---|---|
+| Compression layer | `nn.Linear(128 → 4)` |
+| CV encoding | Complex displacement parameterization |
+| Ansatz | `GaussianVariationalAnsatz(n_modes=2, depth=1, squeezing_cap=1.5)` |
+| Readout | Deterministic first-moment readout (`mu_final`) |
+| Readout layer | `nn.Linear(4 → 2)` |
+| Expected trainable params | ≈ 536 |
+| CV backend | `GaussianBackend`, CPU-only accepted |
+| Separate CV scalar gate params | None unless QStrata backend strictly requires them |
+
+These assumptions supersede any earlier Q26 draft. Exact trainable count must be printed at startup.
+
+---
+
+## 3c. Future Experiment Automation Phase
+
+All slices in this phase are **PLANNED**.
+All slices in this phase are **BLOCKED** until Q26 passes, Q27 completes, and Q28 comparative analysis completes.
+
+Do not begin any automation, NAS, or infrastructure work before that gate.
+
+| Slice | Description | Status | Blocked Until |
+|---|---|---|---|
+| Q30 | Experiment Automation Design | PLANNED | Q28 complete |
+| Q31 | Local GPU Experiment Runner | PLANNED | Q30 complete |
+| Q32 | Lightweight NAS Search Space Design | PLANNED | Q31 complete |
+| Q33 | Local NAS Pilot | PLANNED | Q32 complete |
+| Q34 | AWS / Ray Distributed Design | PLANNED | Q33 complete |
+| Q35 | Distributed NAS Pilot | PLANNED | Q34 complete |
+
+---
+
+## 3d. NAS / AWS / Ray Gating Rules
+
+NAS, AWS, and Ray work is **BLOCKED** until ALL of the following are complete:
+
+- Q26: CV binary smoke test **PASSES**
+- Q27: CV binary full training **COMPLETE**
+- Q28: DV vs CV binary comparative analysis **COMPLETE**
+
+**Reason:** Do not automate search before the CV baseline is scientifically validated.
+Premature scaling increases uncertainty and wastes resources. NAS requires a validated
+baseline to define meaningful search bounds, evaluation criteria, and stopping conditions.
+
+---
+
+## 3e. Tagging Strategy
 
 | Tag | Trigger condition |
 |---|---|
@@ -224,6 +287,7 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [x] **Q23** (VinDr DV Binary Comparative Report) is completed — VinDr **DV** binary phase CLOSED
 - [x] **Q24** (Roadmap Realignment for CV Binary Quantum Phase) is completed
 - [x] **Q25** (CV binary feasibility design) is completed
+- [x] **Q25A** (Roadmap prioritization and automation planning) is completed
 - [ ] **Q26–Q28** (VinDr CV binary benchmarking) is completed — PENDING
 - [ ] **Q29** (Binary Quantum Release Tagging) is completed — PENDING
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
@@ -264,7 +328,8 @@ No resources or design work should be allocated to multiclass items until Q29 is
 ## 8. Immediate Next Action
 
 VinDr **DV** binary phase is **CLOSED** (Q23 complete).
-VinDr **CV** binary phase is **PENDING** (Q25 next).
+VinDr **CV** binary phase is **PENDING** (Q26 next — smoke test).
+Roadmap priorities and automation gating documented (Q25A complete).
 
 ```
 Run:

@@ -78,6 +78,7 @@ Binary closure is complete only when both datasets have finished both model type
 | Q25A | Roadmap Prioritization and Experiment Automation Planning | COMPLETE |
 | Q26 | Continuous-Variable Binary Smoke Test | COMPLETE |
 | Q27 | Continuous-Variable Binary Full Training | COMPLETE |
+| Q27A | NAS Strategy and Optimization Phase Refinement | COMPLETE |
 | Q28 | DV vs CV Binary Comparative Report | NEXT |
 | Q29 | Binary Quantum Release Tagging | PLANNED |
 | — | **VinDr CV binary benchmarking** | **PENDING** |
@@ -93,6 +94,7 @@ Binary closure is complete only when both datasets have finished both model type
 - **Q25A** — Roadmap Prioritization and Experiment Automation Planning. Separated immediate scientific execution priorities from future automation priorities. Gated NAS, AWS, and Ray work until CV baseline is validated. Corrected Q26 assumptions from final Q25 design decisions.
 - **Q26** — Continuous-Variable Binary Smoke Test. Validate minimal CV pipeline with forward pass, gradient flow, numerical stability, probability sanity, and optimizer update verification.
 - **Q27** — Continuous-Variable Binary Full Training. Train CV binary hybrid benchmark on VinDr-SpineXR using validated CV pipeline.
+- **Q27A** — NAS Strategy and Optimization Phase Refinement. Documentation-only slice. Replaced generic Q30–Q35 automation placeholders with a structured optimization roadmap separating classical NAS (Q32) from quantum NAS (Q33). Added classical ceiling principle and multi-objective optimization philosophy. No training, no scripts.
 - **Q28** — DV vs CV Binary Comparative Report. Scientific comparison of DV hybrid, CV hybrid, and classical controls across VinDr binary benchmarks.
 - **Q29** — Binary Quantum Release Tagging. Create binary benchmark release tags after DV and CV binary phases are both complete.
 
@@ -148,18 +150,27 @@ No automation, NAS, or distributed infrastructure work should begin before this 
 ## 3c. Future Experiment Automation Phase
 
 All slices in this phase are **PLANNED**.
-All slices in this phase are **BLOCKED** until Q26 passes, Q27 completes, and Q28 comparative analysis completes.
+All slices in this phase are **BLOCKED** until Q29 (Binary Quantum Release Tagging) is complete.
 
 Do not begin any automation, NAS, or infrastructure work before that gate.
 
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
-| Q30 | Experiment Automation Design | PLANNED | Q28 complete |
+| Q30 | Experiment Automation Framework Design | PLANNED | Q29 complete |
 | Q31 | Local GPU Experiment Runner | PLANNED | Q30 complete |
-| Q32 | Lightweight NAS Search Space Design | PLANNED | Q31 complete |
-| Q33 | Local NAS Pilot | PLANNED | Q32 complete |
-| Q34 | AWS / Ray Distributed Design | PLANNED | Q33 complete |
-| Q35 | Distributed NAS Pilot | PLANNED | Q34 complete |
+| Q32 | NAS Search Space Design — Classical Feature Extractors | PLANNED | Q31 complete |
+| Q33 | NAS Search Space Design — Quantum Heads (DV/CV) | PLANNED | Q32 complete |
+| Q34 | Local Multi-Objective NAS Pilot | PLANNED | Q33 complete |
+| Q35 | AWS / Ray Distributed Scaling Design | PLANNED | Q34 complete |
+
+**Slice descriptions — Optimization Phase:**
+
+- **Q30** — Experiment Automation Framework Design. Design reproducible local experiment orchestration covering metric tracking, checkpoint management, artifact naming, and sweep configuration. Output: automation design document. No training.
+- **Q31** — Local GPU Experiment Runner. Implement YAML-driven runner supporting: run queuing, resume of failed runs, metric collection, and result ranking by configurable criteria. Output: working local runner with tested examples.
+- **Q32** — NAS Search Space Design — Classical Feature Extractors. Define and search a compact classical CNN architecture space (convolution block types, channel widths, depth, pooling variants). Goal: establish the strongest compact classical performance ceiling before quantum architecture search. Classical NAS always precedes quantum NAS.
+- **Q33** — NAS Search Space Design — Quantum Heads (DV/CV). Define search spaces for DV (qubits, depth, ansatz type) and CV (modes, depth, squeezing, encoding) quantum heads. Requires classical ceiling from Q32 to bound evaluation criteria and search stopping conditions.
+- **Q34** — Local Multi-Objective NAS Pilot. Execute joint optimization across AUROC, F1, parameter count, inference latency, and training stability on a single GPU. Multi-objective, not single-metric ranking. No AWS or Ray.
+- **Q35** — AWS / Ray Distributed Scaling Design. Design distributed NAS only after local NAS (Q34) is validated. Covers AWS GPU provisioning, Ray orchestration, artifact management, cost controls. Output: distributed scaling design document. No code until design is approved.
 
 ---
 
@@ -170,14 +181,77 @@ NAS, AWS, and Ray work is **BLOCKED** until ALL of the following are complete:
 - Q26: CV binary smoke test **PASSES**
 - Q27: CV binary full training **COMPLETE**
 - Q28: DV vs CV binary comparative analysis **COMPLETE**
+- Q29: Binary quantum release tagging **COMPLETE**
 
-**Reason:** Do not automate search before the CV baseline is scientifically validated.
-Premature scaling increases uncertainty and wastes resources. NAS requires a validated
-baseline to define meaningful search bounds, evaluation criteria, and stopping conditions.
+**Reason:** Do not automate search before the CV baseline is scientifically validated and
+binary benchmarking is formally closed. Premature scaling increases uncertainty and wastes
+resources. NAS requires a validated baseline to define meaningful search bounds, evaluation
+criteria, and stopping conditions.
+
+**Additional gate — Q35:** AWS / Ray distributed scaling is additionally blocked until Q34
+(local multi-objective NAS pilot) is complete and validated. Distributed infrastructure must
+not be provisioned before local NAS confirms the search procedure is sound.
 
 ---
 
-## 3e. Tagging Strategy
+## 3e. Optimization Philosophy
+
+The following principles govern all optimization and NAS work in the Q30–Q35 phase.
+These are research-level constraints, not implementation preferences.
+
+### Classical Ceiling Principle
+
+> **Classical NAS (Q32) must always precede quantum NAS (Q33).**
+
+Before exploring quantum architecture search, the strongest compact classical architecture
+achievable under the same parameter and latency budget must be established. This ceiling
+defines the performance reference against which quantum advantage claims are evaluated.
+A quantum result that does not beat a well-optimized classical baseline under equivalent
+resource constraints does not support quantum advantage conclusions.
+
+Quantum NAS (Q33) begins only after Q32 has produced a validated compact classical ceiling.
+
+### Multi-Objective Optimization Principle
+
+Single-metric optimization (e.g., maximize AUROC only) is insufficient for medical imaging
+research. Q34 and later slices optimize jointly across:
+
+| Objective | Rationale |
+|---|---|
+| Test AUROC | Primary discriminative performance metric |
+| Test F1 | Class-balance-aware performance; critical for imbalanced datasets |
+| Trainable parameter count | Model compactness; resource efficiency |
+| Inference latency (ms/sample) | Clinical deployment feasibility |
+| Training stability | Variance across seeds; reproducibility |
+| Generalization gap | val loss − train loss at convergence; overfitting signal |
+
+No single trade-off point is pre-selected. The Pareto frontier is explored. Final model
+selection is a scientific decision, not an automated argmax.
+
+### NAS Philosophy
+
+The NAS procedure in Q32–Q34 is:
+
+- **Constrained**: search spaces are bounded by hardware budget, not unbounded
+- **Reproducible**: all trials are seeded and logged; result tables are exact, not approximate
+- **Interpretable**: each search dimension has a stated scientific motivation
+- **Budget-aware**: wall-clock and GPU cost are tracked as first-class trial metadata
+- **Non-exhaustive by design**: search is guided, not grid-over-everything
+
+### Infrastructure Sequencing Principle
+
+Automation and infrastructure complexity must grow in proportion to validated scientific need:
+
+1. **Validated manual baseline first** — Q17 through Q27
+2. **Design automation** before building it — Q30 produces design documents, not code
+3. **Local single-GPU execution** before distributed — Q31/Q32/Q33/Q34 are local-only
+4. **Distributed infrastructure only after local is validated** — Q35 requires Q34 pass
+5. **AWS and Ray provisioned only after design approval** — no cloud cost before design sign-off
+6. **Never automate a scientifically unvalidated procedure** — the Q29 gate enforces this
+
+---
+
+## 3f. Tagging Strategy
 
 | Tag | Trigger condition |
 |---|---|
@@ -189,7 +263,7 @@ Tags must not be created until all required slices in each phase are complete.
 
 ---
 
-## 3c. Multiclass Phase Gate
+## 3g. Multiclass Phase Gate
 
 **Status: BLOCKED — must not start until all of the following are complete:**
 
@@ -308,6 +382,7 @@ Binary closure is complete when **ALL** of the following conditions are true:
 - [x] **Q25A** (Roadmap prioritization and automation planning) is completed
 - [x] **Q26** (CV binary smoke test) is completed — PASS (2026-05-26)
 - [x] **Q27** (CV binary full training) is completed — PASS (2026-05-26): Test AUROC 0.6708
+- [x] **Q27A** (NAS strategy and optimization phase refinement) is completed — COMPLETE (2026-05-26)
 - [ ] **Q28** (DV vs CV binary comparative report) is completed — NEXT
 - [ ] **Q29** (Binary Quantum Release Tagging) is completed — PENDING
 - [x] VinDr-SpineXR classical full baseline (Q17) is completed and validated
@@ -349,6 +424,7 @@ No resources or design work should be allocated to multiclass items until Q29 is
 
 VinDr **DV** binary phase is **CLOSED** (Q23 complete).
 VinDr **CV** binary phase is **IN PROGRESS** — Q26 PASS, Q27 **PASS** (2026-05-26).
+Q27A (NAS Strategy and Optimization Phase Refinement) is **COMPLETE** (2026-05-26).
 Q28 (DV vs CV Binary Comparative Report) is the immediate next slice.
 
 ```

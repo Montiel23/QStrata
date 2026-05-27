@@ -107,7 +107,8 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Q34B | DV NAS Pilot (second execution) | **COMPLETE** — 5/5 PASS | Q34A ✓ |
 | Q34B-HF | DV Runtime Bottleneck Assessment | **COMPLETE** | Q34B ✓ |
 | Q34B-Parallel-Lite | DV NAS Parallel Execution Validation | **COMPLETE** — 5/5 PASS | Q34B-HF ✓ |
-| Q34C | CV NAS Pilot (third execution) | **NEXT** | Q34B-Parallel-Lite ✓ |
+| Q34C-Preflight | CV NAS Readiness Check | **COMPLETE** — 2 blockers identified | Q34B-Parallel-Lite ✓ |
+| Q34C | CV NAS Pilot (third execution) | **NEXT** (blocked on candidate+orchestrator scripts) | Q34C-Preflight ✓ |
 
 **Phase 5 gate:** Q33C NAS execution protocol design must be complete  
 **Phase 5 note (Q34A):** Q34A COMPLETE — 5/5 trials completed, 4-member Pareto set. Strongest compact candidate: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2,250 params). Pipeline validation passed end-to-end. Reference: `reports/q34a_classical_nas_pilot_mvp.md`.  
@@ -115,7 +116,8 @@ These values are frozen. Future comparative work must reference them explicitly.
 **Phase 5 note (Q34B-HF):** DV runtime bottleneck assessed. Root cause: circuit.matrix() gate embedding chain (CPU-only; ~1ms/sample no-grad; ~334× autograd overhead during training). GPU migration blocked — qcore has no device= propagation; kron ops produce CPU tensors unconditionally. GPU provides no speedup at n=2–4 qubits even if unblocked (matrices 4×4–16×16; GPU launch overhead dominates). Recommended fix (no qcore change): parallel trial execution (5 processes) → ~4.3× speedup (11,491s → ~2,672s). Combined with 2-epoch budget: ~19 min. Reference: `reports/q34b_runtime_bottleneck_skypilot_assessment.md`.  
 **Phase 5 note (Q34B-Parallel-Lite):** Parallel execution validated. 5/5 trials PASS, 4-member Pareto set, wall time 4,621 s (2.49× speedup vs Q34B-sequential). Thread contention observed: ~30 PyTorch threads/process × 5 workers on 12 CPUs → 3.9× per-trial overhead, limiting efficiency to 25% of ideal. Net speedup driven by 2-epoch reduction (2×) + partial parallelism (1.24×). Parallel mode now the default for Q34C. Thread cap fix implemented in Q34B-Parallel-Lite-Thread-Cap preflight via `--thread-cap` flag (sets `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS` per subprocess). Reference: `reports/q34b_parallel_lite_dv_nas_pilot.md`.  
 **Phase 5 note:** Q34 executes incrementally — Q34A (classical) first, Q34B (DV) second, Q34C (CV) third. Do not attempt all three simultaneously. Each pilot produces a Pareto frontier; Q35 performs unified three-frontier comparison.  
-**Phase 5 note (Q34C):** CV NAS pilot records stability taxonomy for every trial. Stability-aware Pareto filtering excludes trials with invalid Gaussian states from the CV frontier regardless of AUROC/F1 values. No AWS or Ray. All three pilots execute on local single GPU. Run with `--parallel --max-workers 5 --epochs 2 --thread-cap 2` (all three optimizations validated in Q34B-Parallel-Lite + EXP-005 preflight).
+**Phase 5 note (Q34C-Preflight):** Readiness check COMPLETE. Infrastructure (parallel, thread-cap, Q31 runner) is fully ready. CV backend (GaussianVariationalAnsatz, GaussianBackend) supports n_modes, depth, squeezing_cap. Two blockers identified: (1) `scripts/train_q34c_cv_candidate.py` missing — per-trial CV training script with Q34C_TRIAL_* output protocol, stability taxonomy, and inline PSD checks; (2) `scripts/run_q34c_cv_nas_pilot.py` missing — Q34C orchestrator with Q33B search space and stability-aware Pareto. Pilot substitutions defined for 5 unimplemented Q33B dimensions (topology, readout, encoding, cov_parameterization, displacement_cap). Variable dimensions: n_modes, cv_depth, squeezing_cap, compression_dim (compression_dim = 2×n_modes enforced). Expected pilot wall time: 300–600 s with thread-cap. Reference: `reports/q34c_cv_nas_readiness_check.md`.  
+**Phase 5 note (Q34C):** CV NAS pilot records stability taxonomy for every trial. Stability-aware Pareto filtering excludes trials with invalid Gaussian states from the CV frontier regardless of AUROC/F1 values. No AWS or Ray. All three pilots execute on local single GPU. Run with `--parallel --max-workers 5 --epochs 2 --thread-cap 2` (all three optimizations validated in Q34B-Parallel-Lite + EXP-005 preflight). **BLOCKED on two missing scripts** — see Q34C-Preflight note and `reports/q34c_cv_nas_readiness_check.md`.
 
 ### Phase 5b — Unified Pareto Analysis (PLANNED)
 
@@ -176,7 +178,8 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Q34A complete | ✓ | Q33C (skipped by pilot execution) — 5/5 PASS |
 | Q34B complete | ✓ | Q34A ✓ — 5/5 PASS |
 | Q34B-Parallel-Lite complete | ✓ | Q34B-HF ✓ — 5/5 PASS, 2.49× speedup, thread contention documented |
-| Q34C unblocked | NEXT | Q34B-Parallel-Lite ✓ |
+| Q34C-Preflight complete | ✓ | Q34B-Parallel-Lite ✓ — 2 blockers: train_q34c_cv_candidate.py + run_q34c_cv_nas_pilot.py |
+| Q34C unblocked | NEXT (blocked on scripts) | Q34C-Preflight ✓ |
 | Q35 unblocked | PLANNED | Q34A + Q34B + Q34C complete |
 | Q36 unblocked | BLOCKED | Q35 Pareto analysis validated |
 
@@ -264,13 +267,14 @@ Q34B status: COMPLETE — 5/5 trials PASS; Pareto set: 4 trials; pipeline valida
 Q34B-HF status: COMPLETE — bottleneck: circuit.matrix() + autograd; GPU blocked; recommendation: parallel trials; reference: reports/q34b_runtime_bottleneck_skypilot_assessment.md
 Q34B-Parallel-Lite status: COMPLETE — 5/5 trials PASS; Pareto set: 4 trials; wall time 4621s (2.49× speedup); thread contention 3.9×/trial; reference: reports/q34b_parallel_lite_dv_nas_pilot.md
 EXP-005-Thread-Cap-Preflight status: COMPLETE — --thread-cap flag added; OMP/MKL/OPENBLAS_NUM_THREADS propagated per subprocess; validated; Q34C command: --parallel --max-workers 5 --epochs 2 --thread-cap 2
-Q34C status: NEXT — CV NAS pilot; command: --parallel --max-workers 5 --epochs 2 --thread-cap 2 (all flags validated)
+Q34C-Preflight status: COMPLETE — infra ready; 2 blockers: train_q34c_cv_candidate.py + run_q34c_cv_nas_pilot.py; pilot substitutions defined; reference: reports/q34c_cv_nas_readiness_check.md
+Q34C status: NEXT (blocked on scripts) — command when ready: --parallel --max-workers 5 --epochs 2 --thread-cap 2; variable dims: n_modes, cv_depth, squeezing_cap, compression_dim
 Q35 status: PLANNED — unified Pareto analysis (after Q34A–Q34C)
 Q36 status: BLOCKED — requires Q35 validated
 Phase 2 (Experiment Automation): COMPLETE
 Phase 3 (Classical NAS Ceiling): IN PROGRESS — Q32 design complete; Q34A pilot PASS (4-epoch, 5-trial; not definitive ceiling)
 Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C realized; Q34B COMPLETE; Q34C NEXT
-Phase 5 (Local NAS Pilot): IN PROGRESS — Q34A COMPLETE; Q34B COMPLETE; Q34B-HF COMPLETE; Q34B-Parallel-Lite COMPLETE; Q34C NEXT
+Phase 5 (Local NAS Pilot): IN PROGRESS — Q34A COMPLETE; Q34B COMPLETE; Q34B-HF COMPLETE; Q34B-Parallel-Lite COMPLETE; Q34C-Preflight COMPLETE; Q34C NEXT (blocked on scripts)
 CV quantum ceiling: UNDEFINED — will be produced by Q34C
 DV quantum ceiling: UNDEFINED — Q34B pilot exploratory (4-epoch, 5-trial); best pilot AUROC 0.6551 (trial_004)
 Classical ceiling: UNDEFINED — Q34A pilot is exploratory; full NAS ceiling pending larger budget run

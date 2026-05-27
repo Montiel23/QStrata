@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-26  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q33A COMPLETE — Q33B NEXT (design only)
+**Status:** Q33B COMPLETE — Q33C NEXT (design only)
 
 ---
 
@@ -91,29 +91,43 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
 | Q33A | NAS Search Space Design — DV Quantum Heads | **COMPLETE** (design only) | Q32 ✓ |
-| Q33B | NAS Search Space Design — CV Quantum Heads | **NEXT** (design only) | Q33A ✓ |
+| Q33B | NAS Search Space Design — CV Quantum Heads | **COMPLETE** (design only) | Q33A ✓ |
+| Q33C | NAS Execution Protocol Design | **NEXT** (design only) | Q33B ✓ |
 
 **Phase 4 gate:** Q32 classical search space design complete ✓  
-**Phase 4 note (Q33A):** Q33A is design only — no NAS execution. Defines the DV quantum head search space (qubit count, ansatz depth, rotation families, entanglement topology, encoding strategy, re-uploading frequency, measurement strategy, compression dimension, classical projection layer) using the same multi-objective framework and constraint system as Q32.  
-**Phase 4 note (Q33B):** Q33B is design only — no NAS execution. Defines the CV Gaussian quantum head search space using the same multi-objective framework, constraint system, and runner infrastructure as Q33A. NAS execution for classical, DV, and CV spaces all begins in Q34.
+**Phase 4 note (Q33A):** Q33A is design only — no NAS execution. Defines the DV quantum head search space (qubit count, ansatz depth, rotation families, entanglement topology, encoding strategy, re-uploading frequency, measurement strategy, compression dimension, classical projection layer).  
+**Phase 4 note (Q33B):** Q33B is design only — no NAS execution. Defines the CV Gaussian quantum head search space (n_modes, cv_depth, squeezing_cap, displacement_cap, encoding strategy, beam-splitter topology, readout strategy, compression dimension, covariance parameterization). Stability-first design: six Gaussian-state validity conditions; eight-category stability taxonomy; covariance explosion mitigation via bounded squeezing, constrained depth, and symplectic parameterization.  
+**Phase 4 note (Q33C):** Q33C is design only — no NAS execution. Finalizes the Q34A/Q34B/Q34C incremental execution plan, trial sampling strategy, timeout values, leaderboard format, and CV stability monitoring protocol.
 
 ### Phase 5 — Local Multi-Objective NAS Pilot (PLANNED)
 
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
-| Q34 | Local Multi-Objective NAS Pilot | PLANNED | Q33 complete |
+| Q34A | Classical NAS Pilot (first execution) | PLANNED | Q33C ✓ |
+| Q34B | DV NAS Pilot (second execution) | PLANNED | Q34A complete |
+| Q34C | CV NAS Pilot (third execution) | PLANNED | Q34B complete |
 
-**Phase 5 gate:** Q33B CV quantum NAS search space design must be complete  
-**Phase 5 note:** Q34 is the first NAS execution phase. Joint pilot over Q32 classical, Q33A DV, and Q33B CV search spaces. Optimization across AUROC, F1, parameter count, latency, and stability on single GPU. No AWS or Ray. Classical Pareto frontier (Q32 ceiling), DV quantum Pareto frontier (Q33A), and CV quantum Pareto frontier (Q33B) produced in the same pilot and compared in the same report.
+**Phase 5 gate:** Q33C NAS execution protocol design must be complete  
+**Phase 5 note:** Q34 executes incrementally — Q34A (classical) first, Q34B (DV) second, Q34C (CV) third. Do not attempt all three simultaneously on the first execution day. Each pilot produces a Pareto frontier; Q35 performs unified three-frontier comparison.  
+**Phase 5 note (Q34C):** CV NAS pilot records stability taxonomy for every trial. Stability-aware Pareto filtering excludes trials with invalid Gaussian states from the CV frontier regardless of AUROC/F1 values. No AWS or Ray. All three pilots execute on local single GPU.
+
+### Phase 5b — Unified Pareto Analysis (PLANNED)
+
+| Slice | Description | Status | Blocked Until |
+|---|---|---|---|
+| Q35 | Unified Pareto Analysis and NAS Hardening | PLANNED | Q34A + Q34B + Q34C complete |
+
+**Phase 5b gate:** Q34A, Q34B, and Q34C must all be complete  
+**Phase 5b note:** Full three-frontier comparison: classical (Q34A) vs DV (Q34B) vs CV (Q34C) Pareto frontiers. Stability taxonomy analysis for CV trials. Identifies which Q33A/Q33B dimensions drive Pareto-optimal quantum performance. Produces NAS hardening recommendations.
 
 ### Phase 6 — Distributed Scaling (BLOCKED)
 
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
-| Q35 | AWS / Ray Distributed Scaling Design | BLOCKED | Q34 (local NAS validated) |
+| Q36 | AWS / Ray Distributed Scaling Design | BLOCKED | Q35 (Pareto analysis validated) |
 
-**Phase 6 gate:** Q34 local NAS pilot must be complete and validated  
-**Phase 6 note:** Design document only before any infrastructure is provisioned.
+**Phase 6 gate:** Q35 unified Pareto analysis must be complete and validated  
+**Phase 6 note:** Design document only before any infrastructure is provisioned. No cloud resources before Q36 design is approved.
 
 ### Phase 7 — Multiclass Benchmarking (BLOCKED)
 
@@ -142,7 +156,7 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 
 ## 3. Active Gating Rules
 
-### NAS / Automation Gate (Q32–Q35)
+### NAS / Automation Gate (Q32–Q36)
 
 | Gate | Status | Condition |
 |---|---|---|
@@ -151,9 +165,13 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Q31A complete | ✓ | Q31 complete |
 | Q32 complete | ✓ | Q31A ✓ — design only; no NAS execution |
 | Q33A complete | ✓ | Q32 ✓ — design only; no NAS execution |
-| Q33B unblocked | NEXT (design only) | Q33A ✓ |
-| Q34 unblocked | PLANNED | Q33B CV NAS design |
-| Q35 unblocked | BLOCKED | Q34 local NAS validated |
+| Q33B complete | ✓ | Q33A ✓ — design only; no NAS execution |
+| Q33C unblocked | NEXT (design only) | Q33B ✓ |
+| Q34A unblocked | PLANNED | Q33C complete |
+| Q34B unblocked | PLANNED | Q34A complete |
+| Q34C unblocked | PLANNED | Q34B complete |
+| Q35 unblocked | PLANNED | Q34A + Q34B + Q34C complete |
+| Q36 unblocked | BLOCKED | Q35 Pareto analysis validated |
 
 ### Multiclass Gate
 
@@ -161,17 +179,20 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 |---|---|---|
 | Phase 3 (Q32) complete | ✓ (design) | Q31A ✓ |
 | Phase 4 (Q33A) complete | ✓ (design) | Q32 ✓ |
-| Phase 4 (Q33B) complete | PLANNED | Q33A ✓ |
-| Phase 5 (Q34) complete | PLANNED | Q33B complete |
+| Phase 4 (Q33B) complete | ✓ (design) | Q33A ✓ |
+| Phase 4 (Q33C) complete | PLANNED | Q33B ✓ |
+| Phase 5 (Q34A–Q34C) complete | PLANNED | Q33C complete |
+| Phase 5b (Q35) complete | PLANNED | Q34A–Q34C complete |
 | Multiclass may begin | **BLOCKED** | All of the above complete |
 
-### AWS/Ray Gate (Q35)
+### AWS/Ray Gate (Q36)
 
 | Gate | Status | Condition |
 |---|---|---|
-| Q34 local NAS validated | PLANNED | — |
-| Q35 design approved | BLOCKED | Q34 complete |
-| Cloud infrastructure provisioned | BLOCKED | Q35 design approved |
+| Q34A–Q34C local NAS validated | PLANNED | — |
+| Q35 Pareto analysis complete | PLANNED | Q34A–Q34C complete |
+| Q36 design approved | BLOCKED | Q35 complete |
+| Cloud infrastructure provisioned | BLOCKED | Q36 design approved |
 
 ---
 
@@ -191,19 +212,20 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 
 ## 5. Immediate Next Action
 
-**Q33B — NAS Search Space Design: CV Quantum Heads**
+**Q33C — NAS Execution Protocol Design**
 
-Purpose: define the GaussianVariationalAnsatz CV quantum head search space (n_modes, cv_depth, squeezing_cap, displacement_cap, encoding scheme, readout strategy) using the same multi-objective framework, constraint system, and runner infrastructure as Q33A. Q33B is design only — no NAS execution. The CV quantum search space must be defined before Q34 can execute joint classical, DV, and CV NAS trials.
+Purpose: finalize the Q34A/Q34B/Q34C incremental execution plan. Define trial sampling strategy (random search vs. lightweight Bayesian), per-trial timeout values for each search space, leaderboard format, and CV stability monitoring protocol. Q33C is design only — no NAS execution. Q34A is the first local NAS execution phase and must not begin before Q33C is complete.
 
 Reference documents:
+- `docs/architecture/q33b_cv_quantum_nas_search_space.md`
+- `reports/q33b_cv_quantum_nas_search_space_design.md`
 - `docs/architecture/q33a_dv_quantum_nas_search_space.md`
-- `reports/q33a_dv_quantum_nas_search_space_design.md`
 - `docs/architecture/q32_classical_nas_search_space.md`
-- `reports/q32_classical_nas_search_space_design.md`
 - `docs/specs/qstrata_experiment_config_schema.md`
 - `reports/q31a_runner_reproducibility_test_and_hardening.md`
 
-Gate: Q33A complete ✓ (DV quantum NAS search space design — design only; no NAS execution)
+Gate: Q33B complete ✓ (CV quantum NAS search space design — design only; no NAS execution)  
+Execution ordering: Q34A (classical) → Q34B (DV) → Q34C (CV). Do not attempt all three simultaneously.
 
 ---
 
@@ -213,15 +235,21 @@ Q31 status: COMPLETE — smoke PASS (experiment_id 20260526_222939_a508a2)
 Q31A status: COMPLETE — reproducibility PASS (loss_delta=0.0, tolerance 0.0001)
 Q32 status: COMPLETE — design only; no NAS execution
 Q33A status: COMPLETE — design only; no NAS execution
-Q33B status: NEXT — CV Quantum NAS Search Space Design (design only)
-Q34 status: PLANNED — first local NAS execution (classical + DV + CV)
+Q33B status: COMPLETE — design only; no NAS execution
+Q33C status: NEXT — NAS Execution Protocol Design (design only)
+Q34A status: PLANNED — classical NAS pilot (first execution)
+Q34B status: PLANNED — DV NAS pilot (second execution)
+Q34C status: PLANNED — CV NAS pilot (third execution)
+Q35 status: PLANNED — unified Pareto analysis (after Q34A–Q34C)
+Q36 status: BLOCKED — requires Q35 validated
 Phase 2 (Experiment Automation): COMPLETE
-Phase 3 (Classical NAS Ceiling): IN PROGRESS — Q32 design complete; NAS execution in Q34
-Phase 4 (Quantum NAS): IN PROGRESS — Q33A complete; Q33B NEXT (design only)
-DV quantum ceiling: UNDEFINED — will be produced by Q34
-Classical ceiling: UNDEFINED — will be produced by Q34
+Phase 3 (Classical NAS Ceiling): IN PROGRESS — Q32 design complete; execution in Q34A
+Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C NEXT (design only)
+CV quantum ceiling: UNDEFINED — will be produced by Q34C
+DV quantum ceiling: UNDEFINED — will be produced by Q34B
+Classical ceiling: UNDEFINED — will be produced by Q34A
 Binary benchmarking phase: CLOSED
-Multiclass: BLOCKED (requires Phase 3 + 4 + 5)
-AWS/Ray: BLOCKED (requires Q34 local NAS validated)
+Multiclass: BLOCKED (requires Phase 3 + 4 + 5b)
+AWS/Ray: BLOCKED (requires Q35 validated)
 Object detection: BLOCKED (out of current roadmap scope)
 ```

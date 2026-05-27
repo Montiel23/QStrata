@@ -1,7 +1,7 @@
 experiment:
   phase: q34c_cv_nas_pilot
-  trial_id: q34c_trial_001
-  description: Q34C trial 1 n_modes=4 depth=1 sq_cap=0.5 lr=0.0005 wd=0.0
+  trial_id: q34c_trial_004
+  description: Q34C trial 4 n_modes=4 depth=3 sq_cap=0.5 lr=0.001 wd=0.0001
 dataset:
   name: vindr_binary_roi_224
   split: canonical_42
@@ -11,7 +11,7 @@ model:
   backbone: c006_d040_frozen
   checkpoint_path: checkpoints/c006_d040_classical_anchor.pt
   n_modes: 4
-  cv_depth: 1
+  cv_depth: 3
   squeezing_cap: 0.5
   displacement_cap: 2.0
   compression_dim: 8
@@ -23,15 +23,15 @@ training:
   epochs: 2
   batch_size: 4
   optimizer: AdamW
-  learning_rate: 0.0005
-  weight_decay: 0.0
+  learning_rate: 0.001
+  weight_decay: 0.0001
   early_stopping:
     enabled: false
 reproducibility:
-  seed: 42
+  seed: 45
 command:
   executable: python3
   args:
   - scripts/train_q34c_cv_candidate.py
   - --config
-  - configs/experiments/q34c_cv_nas/q34c_trial_001.yaml
+  - configs/experiments/q34c_cv_nas/q34c_trial_004.yaml

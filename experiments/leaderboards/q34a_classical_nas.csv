@@ -1,0 +1,6 @@
+experiment_id,timestamp_start,phase,status,smoke_pass,return_code,duration_seconds,git_commit,git_dirty
+20260527_060526_0731ae,2026-05-27T06:05:26.133463,q34a_classical_nas,completed,,0,286.464,b5d8e7f5361e,False
+20260527_061013_2207ab,2026-05-27T06:10:13.842856,q34a_classical_nas,completed,,0,286.896,b5d8e7f5361e,False
+20260527_061501_389ff0,2026-05-27T06:15:01.959640,q34a_classical_nas,completed,,0,286.59,b5d8e7f5361e,False
+20260527_061949_e2c608,2026-05-27T06:19:49.838128,q34a_classical_nas,completed,,0,293.287,b5d8e7f5361e,False
+20260527_062444_d51e6f,2026-05-27T06:24:44.345455,q34a_classical_nas,completed,,0,290.754,b5d8e7f5361e,False

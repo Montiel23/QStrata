@@ -1,0 +1,37 @@
+experiment:
+  phase: q34a_classical_nas
+  description: "Q34A classical NAS pilot trial 2 \u2014 backbone_family=standard_cnn\
+    \ depth=shallow channels=[16, 32] compress=4 act=ReLU dropout=0.3 lr=0.0005 wd=0.0"
+dataset:
+  name: vindr_binary_roi_224
+  root: data/processed/vindr_binary_roi_224
+model:
+  architecture: classical_nas_candidate
+  backbone: c006_d040_classical_anchor
+  backbone_frozen: true
+  checkpoint_path: checkpoints/c006_d040_classical_anchor.pt
+  backbone_family: standard_cnn
+  channel_width:
+  - 16
+  - 32
+  depth: shallow
+  compression_dim: 4
+  activation: ReLU
+  normalization: BatchNorm
+  dropout: 0.3
+  pooling: adaptive_average
+training:
+  epochs: 4
+  batch_size: 4
+  optimizer: AdamW
+  learning_rate: 0.0005
+  weight_decay: 0.0
+  loss: CrossEntropyLoss
+reproducibility:
+  seed: 43
+command:
+  executable: python3
+  args:
+  - scripts/train_q34a_classical_candidate.py
+  - --config
+  - configs/experiments/q34a_classical_nas/q34a_trial_002.yaml

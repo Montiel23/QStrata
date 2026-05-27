@@ -113,9 +113,9 @@ These values are frozen. Future comparative work must reference them explicitly.
 **Phase 5 note (Q34A):** Q34A COMPLETE — 5/5 trials completed, 4-member Pareto set. Strongest compact candidate: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2,250 params). Pipeline validation passed end-to-end. Reference: `reports/q34a_classical_nas_pilot_mvp.md`.  
 **Phase 5 note (Q34B):** Q34B COMPLETE — 5/5 trials completed, 4-member Pareto set. Best DV AUROC: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params). Best DV F1: q34b_trial_001 (AUROC 0.6415, F1 0.6356, 280 params). Wall time: 11,491 s (CPU-only). Reference: `reports/q34b_dv_nas_pilot_mvp.md`.  
 **Phase 5 note (Q34B-HF):** DV runtime bottleneck assessed. Root cause: circuit.matrix() gate embedding chain (CPU-only; ~1ms/sample no-grad; ~334× autograd overhead during training). GPU migration blocked — qcore has no device= propagation; kron ops produce CPU tensors unconditionally. GPU provides no speedup at n=2–4 qubits even if unblocked (matrices 4×4–16×16; GPU launch overhead dominates). Recommended fix (no qcore change): parallel trial execution (5 processes) → ~4.3× speedup (11,491s → ~2,672s). Combined with 2-epoch budget: ~19 min. Reference: `reports/q34b_runtime_bottleneck_skypilot_assessment.md`.  
-**Phase 5 note (Q34B-Parallel-Lite):** Parallel execution validated. 5/5 trials PASS, 4-member Pareto set, wall time 4,621 s (2.49× speedup vs Q34B-sequential). Thread contention observed: ~30 PyTorch threads/process × 5 workers on 12 CPUs → 3.9× per-trial overhead, limiting efficiency to 25% of ideal. Net speedup driven by 2-epoch reduction (2×) + partial parallelism (1.24×). Parallel mode now the default for Q34C. Thread cap fix (`OMP_NUM_THREADS=2` per subprocess) not yet applied — deferred to Q34C for ~5× ideal speedup. Reference: `reports/q34b_parallel_lite_dv_nas_pilot.md`.  
+**Phase 5 note (Q34B-Parallel-Lite):** Parallel execution validated. 5/5 trials PASS, 4-member Pareto set, wall time 4,621 s (2.49× speedup vs Q34B-sequential). Thread contention observed: ~30 PyTorch threads/process × 5 workers on 12 CPUs → 3.9× per-trial overhead, limiting efficiency to 25% of ideal. Net speedup driven by 2-epoch reduction (2×) + partial parallelism (1.24×). Parallel mode now the default for Q34C. Thread cap fix implemented in Q34B-Parallel-Lite-Thread-Cap preflight via `--thread-cap` flag (sets `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS` per subprocess). Reference: `reports/q34b_parallel_lite_dv_nas_pilot.md`.  
 **Phase 5 note:** Q34 executes incrementally — Q34A (classical) first, Q34B (DV) second, Q34C (CV) third. Do not attempt all three simultaneously. Each pilot produces a Pareto frontier; Q35 performs unified three-frontier comparison.  
-**Phase 5 note (Q34C):** CV NAS pilot records stability taxonomy for every trial. Stability-aware Pareto filtering excludes trials with invalid Gaussian states from the CV frontier regardless of AUROC/F1 values. No AWS or Ray. All three pilots execute on local single GPU. Apply parallel trial execution + 2-epoch budget + `OMP_NUM_THREADS=2` thread cap (from Q34B-Parallel-Lite findings) before Q34C execution.
+**Phase 5 note (Q34C):** CV NAS pilot records stability taxonomy for every trial. Stability-aware Pareto filtering excludes trials with invalid Gaussian states from the CV frontier regardless of AUROC/F1 values. No AWS or Ray. All three pilots execute on local single GPU. Run with `--parallel --max-workers 5 --epochs 2 --thread-cap 2` (all three optimizations validated in Q34B-Parallel-Lite + EXP-005 preflight).
 
 ### Phase 5b — Unified Pareto Analysis (PLANNED)
 
@@ -223,10 +223,10 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 
 Q34B COMPLETE + Q34B-HF COMPLETE + Q34B-Parallel-Lite COMPLETE — DV pipeline validated, bottleneck assessed, parallel execution validated. Q34C is now unblocked.
 
-**Before executing Q34C, apply the following (Q34B-Parallel-Lite findings):**
+**Before executing Q34C, apply the following (Q34B-Parallel-Lite + Thread-Cap preflight):**
 1. **Parallel trial execution** (5 independent processes, `--parallel --max-workers 5`) — already implemented in orchestrator
 2. **2-epoch pilot budget** (`--epochs 2`) — validated in Q34B-Parallel-Lite
-3. **Thread count cap** — set `OMP_NUM_THREADS=2`, `MKL_NUM_THREADS=2`, and `torch.set_num_threads(2)` per subprocess environment before Q31 runner launch; limits PyTorch to 2 threads/process (10 total vs 12 CPUs), approaching theoretical 5× speedup. **Not yet applied — Q34C should apply this fix.** Expected Q34C wall time with fix: ~1,200–1,500 s (~20–25 min).
+3. **Thread count cap** (`--thread-cap 2`) — implemented in preflight EXP-005; sets `OMP_NUM_THREADS=2`, `MKL_NUM_THREADS=2`, `OPENBLAS_NUM_THREADS=2` per trial subprocess; limits PyTorch to 2 threads/process (10 total vs 150 observed in Q34B-Parallel-Lite), approaching theoretical 5× speedup. Expected Q34C wall time: ~1,200–1,500 s (~20–25 min).
 
 Q34C will execute the CV (Gaussian / continuous-variable) quantum head NAS pilot using the search space defined in Q33B. Protocol: 5 trials, 2 epochs, parallel. Produces a CV Pareto frontier with stability-aware filtering.
 
@@ -262,8 +262,9 @@ Q33C status: REALIZED within Q34A — protocol implemented; no separate doc requ
 Q34A status: COMPLETE — 5/5 trials PASS; Pareto set: 4 trials; pipeline validated
 Q34B status: COMPLETE — 5/5 trials PASS; Pareto set: 4 trials; pipeline validated; wall time 11491s
 Q34B-HF status: COMPLETE — bottleneck: circuit.matrix() + autograd; GPU blocked; recommendation: parallel trials; reference: reports/q34b_runtime_bottleneck_skypilot_assessment.md
-Q34B-Parallel-Lite status: COMPLETE — 5/5 trials PASS; Pareto set: 4 trials; wall time 4621s (2.49× speedup); thread contention 3.9×/trial; thread cap fix deferred to Q34C; reference: reports/q34b_parallel_lite_dv_nas_pilot.md
-Q34C status: NEXT — CV NAS pilot (unblocked by Q34B-Parallel-Lite; apply parallel + 2-epoch + OMP_NUM_THREADS=2)
+Q34B-Parallel-Lite status: COMPLETE — 5/5 trials PASS; Pareto set: 4 trials; wall time 4621s (2.49× speedup); thread contention 3.9×/trial; reference: reports/q34b_parallel_lite_dv_nas_pilot.md
+EXP-005-Thread-Cap-Preflight status: COMPLETE — --thread-cap flag added; OMP/MKL/OPENBLAS_NUM_THREADS propagated per subprocess; validated; Q34C command: --parallel --max-workers 5 --epochs 2 --thread-cap 2
+Q34C status: NEXT — CV NAS pilot; command: --parallel --max-workers 5 --epochs 2 --thread-cap 2 (all flags validated)
 Q35 status: PLANNED — unified Pareto analysis (after Q34A–Q34C)
 Q36 status: BLOCKED — requires Q35 validated
 Phase 2 (Experiment Automation): COMPLETE

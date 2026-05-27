@@ -131,6 +131,12 @@ def parse_args() -> argparse.Namespace:
                    help="Run trials concurrently via ThreadPoolExecutor")
     p.add_argument("--max-workers", type=int,  default=5,
                    help="Max concurrent workers in parallel mode (default: 5)")
+    p.add_argument("--thread-cap",  type=int,  default=0,
+                   help=(
+                       "Per-subprocess thread cap: sets OMP_NUM_THREADS, MKL_NUM_THREADS, "
+                       "and OPENBLAS_NUM_THREADS in each trial subprocess environment. "
+                       "0 = no cap (default). Recommended: 2 for 5-worker parallel runs."
+                   ))
     return p.parse_args()
 
 
@@ -407,15 +413,29 @@ def run_one_trial(
     sampled: dict,
     pilot_seed: int,
     epochs: int,
+    thread_cap: int = 0,
 ) -> tuple[dict, str]:
     """
     Execute one DV NAS trial. Returns (trial_record, stdout_text).
     Thread-safe: each trial writes to a distinct config path and experiment_id.
+
+    thread_cap: when > 0, sets OMP_NUM_THREADS / MKL_NUM_THREADS /
+    OPENBLAS_NUM_THREADS in the child process environment to limit PyTorch's
+    thread pool size. Recommended: 2 for 5-worker parallel runs on a 12-CPU host
+    (10 total threads vs 150 observed in Q34B-Parallel-Lite with no cap).
     """
     config_yaml = build_trial_yaml(trial_id, trial_idx, sampled, pilot_seed, epochs)
     config_path = os.path.join(CONFIGS_DIR, f"{trial_id}.yaml")
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config_yaml, f, default_flow_style=False, sort_keys=False)
+
+    # Build subprocess environment: inherit parent, apply thread cap if requested.
+    env = os.environ.copy()
+    if thread_cap > 0:
+        cap_str = str(thread_cap)
+        env["OMP_NUM_THREADS"]      = cap_str
+        env["MKL_NUM_THREADS"]      = cap_str
+        env["OPENBLAS_NUM_THREADS"] = cap_str
 
     cmd = [sys.executable, RUNNER_SCRIPT, "--config", config_path]
     t0  = time.monotonic()
@@ -426,6 +446,7 @@ def run_one_trial(
             stderr=subprocess.STDOUT,
             text=True,
             cwd=PROJECT_ROOT,
+            env=env,
         )
         stdout_combined = proc.stdout or ""
     except Exception as exc:
@@ -489,12 +510,14 @@ def main() -> None:
     print("Q34B DV NAS Pilot", flush=True)
     print("=" * 60, flush=True)
     exec_mode = f"parallel (max_workers={args.max_workers})" if args.parallel else "sequential"
+    thread_cap_display = str(args.thread_cap) if args.thread_cap > 0 else "none"
     print(f"  trials:        {args.trials}", flush=True)
     print(f"  epochs/trial:  {args.epochs}", flush=True)
     print(f"  seed:          {args.seed}", flush=True)
     print(f"  pass_threshold:{PASS_THRESHOLD} / {args.trials}", flush=True)
     print(f"  search_space:  {SEARCH_SPACE_VERSION}", flush=True)
     print(f"  execution:     {exec_mode}", flush=True)
+    print(f"  thread_cap:    {thread_cap_display} (OMP/MKL/OPENBLAS per subprocess)", flush=True)
     print(f"  device:        CPU (DV quantum circuit is CPU-only)", flush=True)
     print("=" * 60, flush=True)
     print(flush=True)
@@ -532,6 +555,7 @@ def main() -> None:
             print("-" * 60, flush=True)
             record, stdout_combined = run_one_trial(
                 trial_id, i, sampled, args.seed, args.epochs,
+                thread_cap=args.thread_cap,
             )
             if stdout_combined:
                 sys.stdout.write(stdout_combined)
@@ -564,7 +588,8 @@ def main() -> None:
         futures: dict = {}
         with ThreadPoolExecutor(max_workers=args.max_workers) as pool:
             for i, (trial_id, sampled) in enumerate(zip(trial_ids, sampled_configs)):
-                fut = pool.submit(run_one_trial, trial_id, i, sampled, args.seed, args.epochs)
+                fut = pool.submit(run_one_trial, trial_id, i, sampled, args.seed, args.epochs,
+                                  args.thread_cap)
                 futures[fut] = (i, trial_id)
 
             for fut in as_completed(futures):
@@ -633,6 +658,7 @@ def main() -> None:
         "epochs_per_trial":   args.epochs,
         "execution_mode":     "parallel" if args.parallel else "sequential",
         "max_workers":        args.max_workers if args.parallel else 1,
+        "thread_cap":         args.thread_cap,
         "wall_time_s":        round(pilot_elapsed, 2),
         "search_space":       SEARCH_SPACE,
         "trial_results":      all_trials,

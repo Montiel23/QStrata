@@ -1,0 +1,129 @@
+# infra/skypilot/q34b_dv_smoke_gpu.yaml
+#
+# Q34B-Hotfix: SkyPilot Single-GPU Smoke Test for DV NAS Pilot
+#
+# PURPOSE: Validate Docker execution environment on a cloud GPU instance.
+#          Run a 1-trial, 1-epoch mini-pilot to confirm:
+#            - CUDA is available for backbone feature extraction
+#            - Quantum circuit executes on CPU (confirmed CPU-only)
+#            - Q31 runner schema validation passes
+#            - Metrics are emitted and parsed correctly
+#
+# SCOPE CONSTRAINTS (per Q34B-hotfix hard rules):
+#   - NOT a full NAS run
+#   - NOT Ray or distributed orchestration
+#   - NOT multi-trial parallelism (smoke test only)
+#   - Quantum circuit remains CPU-only (GPU not supported in qcore without refactor)
+#
+# ASSESSMENT NOTE (from reports/q34b_runtime_bottleneck_skypilot_assessment.md):
+#   GPU does NOT solve the Q34B wall-time bottleneck.
+#   The bottleneck is CPU-bound circuit.matrix() + autograd overhead.
+#   For actual speedup, use a high-vCPU CPU instance (e.g., c6i.4xlarge)
+#   with parallel trial execution (5 independent processes).
+#
+#   GPU is useful only for:
+#     - Backbone feature extraction (fast on any modern GPU)
+#     - Future: batched quantum matmul once qcore device= support is added
+#
+# RECOMMENDED ALTERNATIVE (not GPU, higher impact):
+#   See infra/skypilot/q34b_dv_cpu_parallel.yaml (to be created after approval)
+#   Instance: c6i.4xlarge (16 vCPUs, ~$0.68/hr)
+#   Strategy: 5 parallel trial processes
+#   Estimated DV pilot wall time: ~2,700s (0.75h) vs 11,491s (3.2h) current
+#
+# USAGE (requires SkyPilot installation and AWS credentials):
+#   sky launch infra/skypilot/q34b_dv_smoke_gpu.yaml --cloud aws --yes
+#
+# AUTHORIZATION REQUIRED before cloud execution.
+# Do NOT run this YAML before explicit approval.
+
+name: qstrata-q34b-dv-smoke-gpu
+
+resources:
+  cloud: aws
+  instance_type: g4dn.xlarge   # 4 vCPUs, 1× NVIDIA T4 (16GB), 16GB RAM
+  region: us-east-1
+  use_spot: false               # On-demand only for smoke test reliability
+  disk_size: 50                 # GB — enough for Docker image + dataset
+
+# ── File mounts ───────────────────────────────────────────────────────────────
+# Mount the QStrata repository. Assumes the branch is committed and available.
+# In production, replace with S3 sync or git clone from remote.
+file_mounts:
+  /workspace:
+    source: .                   # local repo root — rsync'd to instance
+    mode: COPY
+
+# ── Setup ─────────────────────────────────────────────────────────────────────
+setup: |
+  set -e
+
+  echo "[SETUP] Installing Docker..."
+  sudo apt-get update -q
+  sudo apt-get install -y -q docker.io docker-compose-plugin
+  sudo usermod -aG docker $USER
+
+  echo "[SETUP] Pulling QStrata GPU image (or building locally)..."
+  cd /workspace
+  # If docker-compose.yml exists, build the image
+  # docker compose build qstrata-gpu
+
+  echo "[SETUP] Verifying NVIDIA driver..."
+  nvidia-smi
+
+  echo "[SETUP] Verifying Python + PyTorch in container..."
+  docker run --rm --gpus all docker-qstrata-gpu python3 -c "
+  import torch
+  print(f'PyTorch: {torch.__version__}')
+  print(f'CUDA: {torch.cuda.is_available()}')
+  if torch.cuda.is_available():
+      print(f'Device: {torch.cuda.get_device_name(0)}')
+  "
+
+# ── Run ───────────────────────────────────────────────────────────────────────
+# 1-trial, 1-epoch smoke test — NOT a full NAS run
+run: |
+  set -e
+  cd /workspace
+
+  echo "[SMOKE] Q34B DV single-trial smoke test (1 trial, 1 epoch)"
+  echo "[SMOKE] GPU: backbone only. Quantum circuit: CPU-only (qcore constraint)"
+
+  # Run a 1-trial smoke via the pilot orchestrator with overridden params
+  # Pass --trials 1 --epochs 1 to minimize execution time
+  docker run --rm --gpus all \
+    -v $(pwd):/workspace \
+    docker-qstrata-gpu \
+    python3 /workspace/scripts/run_q34b_dv_nas_pilot.py \
+      --trials 1 \
+      --epochs 1 \
+      --seed 99 \
+      --output-prefix skypilot_smoke 2>&1 | tee /tmp/q34b_smoke.log
+
+  echo "[SMOKE] Exit code: $?"
+
+  # Extract pass/fail
+  if grep -q "Q34B_DV_NAS_PILOT: PASS" /tmp/q34b_smoke.log; then
+    echo "[SMOKE] RESULT: PASS"
+  else
+    echo "[SMOKE] RESULT: FAIL"
+    exit 1
+  fi
+
+# ── Environment variables ──────────────────────────────────────────────────────
+envs:
+  PYTHONUNBUFFERED: "1"
+
+# ── Cost estimate ──────────────────────────────────────────────────────────────
+# g4dn.xlarge on-demand: ~$0.526/hr (us-east-1, 2026 estimate)
+# Estimated smoke test runtime: ~15–30 min (1 trial, 1 epoch)
+# Estimated cost: ~$0.13–$0.26
+#
+# For full 5-trial pilot (4 epochs, sequential):
+#   Estimated runtime: ~3.2h (same as local, quantum is CPU-bound)
+#   Estimated cost: ~$1.68
+#
+# For full 5-trial pilot on c6i.4xlarge (parallel, CPU):
+#   Estimated runtime: ~0.75h
+#   Estimated cost: ~$0.51 (c6i.4xlarge: ~$0.68/hr)
+#   RECOMMENDED: use CPU parallel instance instead of GPU instance

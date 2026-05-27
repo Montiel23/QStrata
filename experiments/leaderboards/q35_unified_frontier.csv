@@ -1,0 +1,11 @@
+trial_id,frontier,auroc,f1,accuracy,params,latency_ms,stability_taxonomy,epochs,is_within_frontier_pareto,is_cross_frontier_pareto,notes
+q34a_trial_002,classical,0.682588,0.58432,0.645161,2174,1.6243,n/a,4,True,True,standard_cnn shallow; compact classical
+q34a_trial_003,classical,0.68683,0.498695,0.630236,17486,1.4654,n/a,4,True,True,depthwise_sep medium; highest AUROC overall
+q34a_trial_004,classical,0.68348,0.639769,0.638902,2250,1.6014,n/a,4,True,True,depthwise_sep shallow; best classical F1; canonical compact classical
+q34a_trial_005,classical,0.686707,0.628659,0.651902,4754,1.3983,n/a,4,True,True,standard_cnn GELU; highest accuracy; lowest classical latency
+q34b_trial_001,dv_quantum,0.641474,0.635631,0.608089,280,83.8266,n/a,4,True,False,q=2 d=1; DOMINATED by cv_trial_002 on all four objectives
+q34b_trial_002,dv_quantum,0.64639,0.578261,0.626384,280,93.8915,n/a,4,True,False,q=2 d=1 RY; DOMINATED by cv_trial_002 on all four objectives
+q34b_trial_003,dv_quantum,0.646156,0.615536,0.623495,292,64.683,n/a,4,True,False,q=2 d=2; DOMINATED by cv_trial_002 on all four objectives
+q34b_trial_004,dv_quantum,0.655069,0.628942,0.614829,598,67.8434,n/a,4,True,False,q=4 d=2 reupload; best DV AUROC; DOMINATED by cv_trial_002 on all objectives
+q34c_trial_002,cv_quantum,0.661695,0.63726,0.627829,269,1.8618,valid,2,True,True,n_modes=1 d=1 sq=0.5; fewest params; canonical compact CV
+q34c_trial_005,cv_quantum,0.662328,0.646347,0.620125,274,2.0001,valid,2,True,True,n_modes=1 d=2 sq=1.5; best F1 cross-frontier; canonical CV candidate

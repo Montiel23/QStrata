@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
 import random
@@ -123,9 +124,13 @@ def parse_args() -> argparse.Namespace:
             "  python3 scripts/run_q34b_dv_nas_pilot.py --trials 5 --seed 42\n"
         ),
     )
-    p.add_argument("--trials", type=int, default=5)
-    p.add_argument("--seed",   type=int, default=42)
-    p.add_argument("--epochs", type=int, default=EPOCHS_PER_TRIAL)
+    p.add_argument("--trials",      type=int,  default=5)
+    p.add_argument("--seed",        type=int,  default=42)
+    p.add_argument("--epochs",      type=int,  default=EPOCHS_PER_TRIAL)
+    p.add_argument("--parallel",    action="store_true", default=False,
+                   help="Run trials concurrently via ThreadPoolExecutor")
+    p.add_argument("--max-workers", type=int,  default=5,
+                   help="Max concurrent workers in parallel mode (default: 5)")
     return p.parse_args()
 
 
@@ -394,6 +399,73 @@ def write_pareto_csv(trials: list[dict], is_pareto: list[bool]) -> None:
             })
 
 
+# ── Per-trial execution (factored out; called by sequential loop and parallel pool) ──
+
+def run_one_trial(
+    trial_id: str,
+    trial_idx: int,
+    sampled: dict,
+    pilot_seed: int,
+    epochs: int,
+) -> tuple[dict, str]:
+    """
+    Execute one DV NAS trial. Returns (trial_record, stdout_text).
+    Thread-safe: each trial writes to a distinct config path and experiment_id.
+    """
+    config_yaml = build_trial_yaml(trial_id, trial_idx, sampled, pilot_seed, epochs)
+    config_path = os.path.join(CONFIGS_DIR, f"{trial_id}.yaml")
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.dump(config_yaml, f, default_flow_style=False, sort_keys=False)
+
+    cmd = [sys.executable, RUNNER_SCRIPT, "--config", config_path]
+    t0  = time.monotonic()
+    try:
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            cwd=PROJECT_ROOT,
+        )
+        stdout_combined = proc.stdout or ""
+    except Exception as exc:
+        stdout_combined = f"[ERROR] {exc}\n"
+        proc = type("FakeProc", (), {"returncode": -1})()
+
+    t_trial     = time.monotonic() - t0
+    trial_seed  = pilot_seed + trial_idx
+    metrics     = parse_trial_metrics(stdout_combined)
+    rj_path     = parse_result_json_path(stdout_combined)
+    exp_id      = None
+
+    if rj_path and os.path.isfile(rj_path):
+        try:
+            with open(rj_path, "r", encoding="utf-8") as jf:
+                rj = json.load(jf)
+            exp_id = rj.get("experiment_id")
+            if metrics["status"] is None:
+                metrics["status"] = rj.get("status") or metrics["status"]
+        except Exception:
+            pass
+
+    trial_status = classify_trial_status(metrics, proc.returncode)
+    record = {
+        "trial_id":         trial_id,
+        "trial_idx":        trial_idx,
+        "sampled_config":   sampled,
+        "config_path":      config_path,
+        "result_json_path": rj_path or "",
+        "experiment_id":    exp_id or "",
+        "return_code":      proc.returncode,
+        "wall_time_s":      round(t_trial, 2),
+        "epochs":           epochs,
+        "seed":             trial_seed,
+        "trial_status":     trial_status,
+        "metrics":          metrics,
+    }
+    return record, stdout_combined
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
@@ -416,11 +488,13 @@ def main() -> None:
     print("=" * 60, flush=True)
     print("Q34B DV NAS Pilot", flush=True)
     print("=" * 60, flush=True)
+    exec_mode = f"parallel (max_workers={args.max_workers})" if args.parallel else "sequential"
     print(f"  trials:        {args.trials}", flush=True)
     print(f"  epochs/trial:  {args.epochs}", flush=True)
     print(f"  seed:          {args.seed}", flush=True)
     print(f"  pass_threshold:{PASS_THRESHOLD} / {args.trials}", flush=True)
     print(f"  search_space:  {SEARCH_SPACE_VERSION}", flush=True)
+    print(f"  execution:     {exec_mode}", flush=True)
     print(f"  device:        CPU (DV quantum circuit is CPU-only)", flush=True)
     print("=" * 60, flush=True)
     print(flush=True)
@@ -450,95 +524,84 @@ def main() -> None:
     all_trials: list[dict] = []
     pilot_start = time.monotonic()
 
-    for i, (trial_id, sampled) in enumerate(zip(trial_ids, sampled_configs)):
-        print("-" * 60, flush=True)
-        print(f"[PILOT] Starting trial {i + 1}/{args.trials}: {trial_id}", flush=True)
-        print("-" * 60, flush=True)
-
-        trial_seed  = args.seed + i
-        config_yaml = build_trial_yaml(
-            trial_id=trial_id, trial_idx=i,
-            sampled=sampled, pilot_seed=args.seed, epochs=args.epochs,
-        )
-        config_path = os.path.join(CONFIGS_DIR, f"{trial_id}.yaml")
-        with open(config_path, "w", encoding="utf-8") as f:
-            yaml.dump(config_yaml, f, default_flow_style=False, sort_keys=False)
-
-        print(f"[PILOT] Config written: {config_path}", flush=True)
-
-        cmd = [sys.executable, RUNNER_SCRIPT, "--config", config_path]
-        t0  = time.monotonic()
-
-        try:
-            proc = subprocess.run(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                cwd=PROJECT_ROOT,
+    if not args.parallel:
+        # ── Sequential mode (default) ──────────────────────────────────────────
+        for i, (trial_id, sampled) in enumerate(zip(trial_ids, sampled_configs)):
+            print("-" * 60, flush=True)
+            print(f"[PILOT] Starting trial {i + 1}/{args.trials}: {trial_id}", flush=True)
+            print("-" * 60, flush=True)
+            record, stdout_combined = run_one_trial(
+                trial_id, i, sampled, args.seed, args.epochs,
             )
-            stdout_combined = proc.stdout or ""
-        except Exception as exc:
-            print(f"[PILOT] ERROR running {trial_id}: {exc}", flush=True)
-            stdout_combined = ""
-            proc = type("FakeProc", (), {"returncode": -1})()
+            if stdout_combined:
+                sys.stdout.write(stdout_combined)
+                sys.stdout.flush()
+            all_trials.append(record)
+            m = record["metrics"]
+            status_str = (
+                "COMPLETED" if record["trial_status"] == "completed" else
+                "UNSTABLE"  if record["trial_status"] == "unstable"  else
+                "INVALID"   if record["trial_status"] == "invalid"   else
+                f"FAILED (rc={record['return_code']})"
+            )
+            print(
+                f"\n[PILOT] Trial {i + 1}/{args.trials} {status_str} | "
+                f"auroc={m.get('auroc')} f1={m.get('f1')} "
+                f"params={m.get('params')} lat={m.get('latency_ms')}ms | "
+                f"grad={m.get('gradient_health')} nan_inf={m.get('nan_inf')} | "
+                f"wall={record['wall_time_s']}s",
+                flush=True,
+            )
+            print(flush=True)
 
-        # Echo captured output
-        if stdout_combined:
-            sys.stdout.write(stdout_combined)
-            sys.stdout.flush()
-
-        t_trial = time.monotonic() - t0
-
-        metrics    = parse_trial_metrics(stdout_combined)
-        rj_path    = parse_result_json_path(stdout_combined)
-        exp_id     = None
-
-        if rj_path and os.path.isfile(rj_path):
-            try:
-                with open(rj_path, "r", encoding="utf-8") as jf:
-                    rj = json.load(jf)
-                exp_id = rj.get("experiment_id")
-                if metrics["status"] is None:
-                    rj_status = rj.get("status")
-                    if rj_status:
-                        metrics["status"] = rj_status
-            except Exception:
-                pass
-
-        trial_status = classify_trial_status(metrics, proc.returncode)
-
-        trial_record = {
-            "trial_id":      trial_id,
-            "trial_idx":     i,
-            "sampled_config": sampled,
-            "config_path":   config_path,
-            "result_json_path": rj_path or "",
-            "experiment_id": exp_id or "",
-            "return_code":   proc.returncode,
-            "wall_time_s":   round(t_trial, 2),
-            "epochs":        args.epochs,
-            "seed":          trial_seed,
-            "trial_status":  trial_status,
-            "metrics":       metrics,
-        }
-        all_trials.append(trial_record)
-
-        status_str = (
-            f"COMPLETED"     if trial_status == "completed" else
-            f"UNSTABLE"      if trial_status == "unstable"  else
-            f"INVALID"       if trial_status == "invalid"   else
-            f"FAILED (rc={proc.returncode})"
-        )
+    else:
+        # ── Parallel mode (--parallel) ─────────────────────────────────────────
         print(
-            f"\n[PILOT] Trial {i + 1}/{args.trials} {status_str} | "
-            f"auroc={metrics.get('auroc')} f1={metrics.get('f1')} "
-            f"params={metrics.get('params')} lat={metrics.get('latency_ms')}ms | "
-            f"grad={metrics.get('gradient_health')} nan_inf={metrics.get('nan_inf')} | "
-            f"wall={t_trial:.1f}s",
+            f"[PILOT] Submitting {args.trials} trials to ThreadPoolExecutor "
+            f"(max_workers={args.max_workers})",
             flush=True,
         )
-        print(flush=True)
+        futures: dict = {}
+        with ThreadPoolExecutor(max_workers=args.max_workers) as pool:
+            for i, (trial_id, sampled) in enumerate(zip(trial_ids, sampled_configs)):
+                fut = pool.submit(run_one_trial, trial_id, i, sampled, args.seed, args.epochs)
+                futures[fut] = (i, trial_id)
+
+            for fut in as_completed(futures):
+                i, trial_id = futures[fut]
+                try:
+                    record, stdout_combined = fut.result()
+                except Exception as exc:
+                    print(f"[PILOT] Trial {trial_id} raised exception: {exc}", flush=True)
+                    continue
+
+                print("-" * 60, flush=True)
+                print(f"[PILOT] Trial {i + 1}/{args.trials} completed: {trial_id}", flush=True)
+                print("-" * 60, flush=True)
+                if stdout_combined:
+                    sys.stdout.write(stdout_combined)
+                    sys.stdout.flush()
+
+                all_trials.append(record)
+                m = record["metrics"]
+                status_str = (
+                    "COMPLETED" if record["trial_status"] == "completed" else
+                    "UNSTABLE"  if record["trial_status"] == "unstable"  else
+                    "INVALID"   if record["trial_status"] == "invalid"   else
+                    f"FAILED (rc={record['return_code']})"
+                )
+                print(
+                    f"\n[PILOT] {trial_id} {status_str} | "
+                    f"auroc={m.get('auroc')} f1={m.get('f1')} "
+                    f"params={m.get('params')} lat={m.get('latency_ms')}ms | "
+                    f"grad={m.get('gradient_health')} nan_inf={m.get('nan_inf')} | "
+                    f"wall={record['wall_time_s']}s",
+                    flush=True,
+                )
+                print(flush=True)
+
+        # Restore deterministic order by trial_idx for downstream processing
+        all_trials.sort(key=lambda t: t["trial_idx"])
 
     pilot_elapsed = time.monotonic() - pilot_start
 
@@ -553,9 +616,10 @@ def main() -> None:
     pareto_indices = [i for i, p in enumerate(is_pareto) if p]
 
     # ── Summary JSON ───────────────────────────────────────────────────────────
-    verdict = "PASS" if n_completed >= PASS_THRESHOLD else "FAIL"
+    verdict    = "PASS" if n_completed >= PASS_THRESHOLD else "FAIL"
+    pilot_name = "Q34B_DV_NAS_PILOT_PARALLEL_LITE" if args.parallel else "Q34B_DV_NAS_PILOT"
     summary = {
-        "pilot":              "Q34B_DV_NAS_PILOT",
+        "pilot":              pilot_name,
         "verdict":            verdict,
         "timestamp":          time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "trials_attempted":   args.trials,
@@ -567,6 +631,8 @@ def main() -> None:
         "search_space_version": SEARCH_SPACE_VERSION,
         "pass_threshold":     PASS_THRESHOLD,
         "epochs_per_trial":   args.epochs,
+        "execution_mode":     "parallel" if args.parallel else "sequential",
+        "max_workers":        args.max_workers if args.parallel else 1,
         "wall_time_s":        round(pilot_elapsed, 2),
         "search_space":       SEARCH_SPACE,
         "trial_results":      all_trials,
@@ -627,7 +693,7 @@ def main() -> None:
     print(f"  Pareto CSV:      {PARETO_CSV_PATH}", flush=True)
     print(flush=True)
 
-    print(f"Q34B_DV_NAS_PILOT: {verdict}", flush=True)
+    print(f"{pilot_name}: {verdict}", flush=True)
 
     sys.exit(0 if verdict == "PASS" else 1)
 

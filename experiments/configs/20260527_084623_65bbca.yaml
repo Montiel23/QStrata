@@ -1,0 +1,48 @@
+experiment:
+  phase: q34b_dv_nas_pilot
+  description: "Q34B DV NAS pilot trial 4 \u2014 qubits=4 depth=2 rot=RX+RY+RZ entangle=circular\
+    \ reup=every_layer compress=4 lr=0.0005 wd=0.0001"
+  trial_id: q34b_trial_004
+dataset:
+  name: vindr_binary_roi_224
+  split: canonical_42
+  preprocessing: roi_224_grayscale
+  root: data/processed/vindr_binary_roi_224
+model:
+  architecture: dv_quantum_head
+  backbone: c006_d040_frozen
+  checkpoint_path: checkpoints/c006_d040_classical_anchor.pt
+  qubit_count: 4
+  ansatz_depth: 2
+  rotation_family: RX+RY+RZ
+  entanglement_topology: circular
+  encoding_strategy: angle_encoding
+  reuploading_frequency: every_layer
+  measurement_strategy: pauli_z_per_qubit
+  compression_dim: 4
+  classical_projection_layer: linear
+training:
+  epochs: 4
+  batch_size: 4
+  optimizer: AdamW
+  learning_rate: 0.0005
+  weight_decay: 0.0001
+  early_stopping:
+    enabled: false
+metrics:
+  primary: AUROC
+  secondary:
+  - F1
+  - accuracy
+  - parameter_count
+  - latency_ms_per_sample
+  - gradient_health
+  - nan_inf_status
+reproducibility:
+  seed: 45
+command:
+  executable: python3
+  args:
+  - scripts/train_q34b_dv_candidate.py
+  - --config
+  - configs/experiments/q34b_dv_nas/q34b_trial_004.yaml

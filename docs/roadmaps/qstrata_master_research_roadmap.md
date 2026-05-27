@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-27  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q34A COMPLETE — Q34B NEXT (DV NAS pilot)
+**Status:** Q34B COMPLETE — Q34C NEXT (CV NAS pilot)
 
 ---
 
@@ -104,11 +104,12 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
 | Q34A | Classical NAS Pilot (first execution) | **COMPLETE** — 5/5 PASS | Q33C ✓ |
-| Q34B | DV NAS Pilot (second execution) | **NEXT** | Q34A ✓ |
-| Q34C | CV NAS Pilot (third execution) | PLANNED | Q34B complete |
+| Q34B | DV NAS Pilot (second execution) | **COMPLETE** — 5/5 PASS | Q34A ✓ |
+| Q34C | CV NAS Pilot (third execution) | **NEXT** | Q34B ✓ |
 
 **Phase 5 gate:** Q33C NAS execution protocol design must be complete  
 **Phase 5 note (Q34A):** Q34A COMPLETE — 5/5 trials completed, 4-member Pareto set. Strongest compact candidate: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2,250 params). Pipeline validation passed end-to-end. Reference: `reports/q34a_classical_nas_pilot_mvp.md`.  
+**Phase 5 note (Q34B):** Q34B COMPLETE — 5/5 trials completed, 4-member Pareto set. Best DV AUROC: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params). Best DV F1: q34b_trial_001 (AUROC 0.6415, F1 0.6356, 280 params). Wall time: 11,491 s (CPU-only). Reference: `reports/q34b_dv_nas_pilot_mvp.md`.  
 **Phase 5 note:** Q34 executes incrementally — Q34A (classical) first, Q34B (DV) second, Q34C (CV) third. Do not attempt all three simultaneously. Each pilot produces a Pareto frontier; Q35 performs unified three-frontier comparison.  
 **Phase 5 note (Q34C):** CV NAS pilot records stability taxonomy for every trial. Stability-aware Pareto filtering excludes trials with invalid Gaussian states from the CV frontier regardless of AUROC/F1 values. No AWS or Ray. All three pilots execute on local single GPU.
 
@@ -169,8 +170,8 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Q33B complete | ✓ | Q33A ✓ — design only; no NAS execution |
 | Q33C unblocked | NEXT (design only) | Q33B ✓ |
 | Q34A complete | ✓ | Q33C (skipped by pilot execution) — 5/5 PASS |
-| Q34B unblocked | NEXT | Q34A ✓ |
-| Q34C unblocked | PLANNED | Q34B complete |
+| Q34B complete | ✓ | Q34A ✓ — 5/5 PASS |
+| Q34C unblocked | NEXT | Q34B ✓ |
 | Q35 unblocked | PLANNED | Q34A + Q34B + Q34C complete |
 | Q36 unblocked | BLOCKED | Q35 Pareto analysis validated |
 
@@ -213,21 +214,28 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 
 ## 5. Immediate Next Action
 
-**Q34B — DV NAS Pilot (second execution)**
+**Q34C — CV NAS Pilot (third execution)**
 
-Q34A COMPLETE — pipeline validated. Q34B is now unblocked.
+Q34B COMPLETE — DV pipeline validated, 5/5 trials PASS, 4-member Pareto set. Q34C is now unblocked.
 
-Q34B will execute the DV quantum head NAS pilot using the search space defined in Q33A. Same protocol as Q34A: 5 trials, 4 epochs each, sequential execution, local GPU only. Produces a DV Pareto frontier over (AUROC, F1, params, latency).
+Q34C will execute the CV (Gaussian / continuous-variable) quantum head NAS pilot using the search space defined in Q33B. Same protocol as Q34A/Q34B: 5 trials, 4 epochs each, sequential execution, local single GPU. Produces a CV Pareto frontier with stability-aware filtering.
+
+CV-specific requirements for Q34C:
+- Stability taxonomy monitoring per trial (8 categories per Q33B design)
+- Gaussian-state validity enforcement: symplectic eigenvalue bound, covariance positive definiteness, trace bound
+- Hard exclusion of trials with invalid Gaussian state from CV Pareto regardless of AUROC/F1
+- Squeezing cap and displacement cap parameter enforcement
 
 Reference documents:
-- `docs/architecture/q33a_dv_quantum_nas_search_space.md`
-- `reports/q33a_dv_quantum_nas_search_space_design.md`
+- `docs/architecture/q33b_cv_quantum_nas_search_space.md`
+- `reports/q33b_cv_quantum_nas_search_space_design.md`
 - `reports/q34a_classical_nas_pilot_mvp.md` (Q34A results — classical reference)
+- `reports/q34b_dv_nas_pilot_mvp.md` (Q34B results — DV reference)
 
-Gate: Q34A complete ✓ (5/5 trials PASS, pipeline validated)  
-Execution ordering: Q34B (DV) → Q34C (CV). Do not attempt both simultaneously.
+Gate: Q34B complete ✓ (5/5 trials PASS, pipeline validated)  
+Execution ordering: Q34C follows Q34B. Do not begin Q34C until this commit is finalized.
 
-**Q33C note:** Q33C (NAS execution protocol design) was effectively realized through the Q34A implementation. The incremental 5-trial/4-epoch pilot protocol, random sampling via `random.choice`, per-trial YAML config generation, sequential Q31 runner invocation, and Pareto CSV output were all defined and validated within Q34A. No separate Q33C design document is required before Q34B proceeds.
+**Q33C note:** Q33C (NAS execution protocol design) was effectively realized through the Q34A implementation. The incremental 5-trial/4-epoch pilot protocol, random sampling via `random.choice`, per-trial YAML config generation, sequential Q31 runner invocation, and Pareto CSV output were all defined and validated within Q34A. No separate Q33C design document is required before Q34C proceeds.
 
 ---
 
@@ -240,18 +248,20 @@ Q33A status: COMPLETE — design only; no NAS execution
 Q33B status: COMPLETE — design only; no NAS execution
 Q33C status: REALIZED within Q34A — protocol implemented; no separate doc required
 Q34A status: COMPLETE — 5/5 trials PASS; Pareto set: 4 trials; pipeline validated
-Q34B status: NEXT — DV NAS pilot (unblocked by Q34A PASS)
-Q34C status: PLANNED — CV NAS pilot (third execution)
+Q34B status: COMPLETE — 5/5 trials PASS; Pareto set: 4 trials; pipeline validated; wall time 11491s
+Q34C status: NEXT — CV NAS pilot (unblocked by Q34B PASS)
 Q35 status: PLANNED — unified Pareto analysis (after Q34A–Q34C)
 Q36 status: BLOCKED — requires Q35 validated
 Phase 2 (Experiment Automation): COMPLETE
 Phase 3 (Classical NAS Ceiling): IN PROGRESS — Q32 design complete; Q34A pilot PASS (4-epoch, 5-trial; not definitive ceiling)
-Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C realized; Q34B NEXT
-Phase 5 (Local NAS Pilot): IN PROGRESS — Q34A COMPLETE; Q34B NEXT
+Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C realized; Q34B COMPLETE; Q34C NEXT
+Phase 5 (Local NAS Pilot): IN PROGRESS — Q34A COMPLETE; Q34B COMPLETE; Q34C NEXT
 CV quantum ceiling: UNDEFINED — will be produced by Q34C
-DV quantum ceiling: UNDEFINED — will be produced by Q34B
+DV quantum ceiling: UNDEFINED — Q34B pilot exploratory (4-epoch, 5-trial); best pilot AUROC 0.6551 (trial_004)
 Classical ceiling: UNDEFINED — Q34A pilot is exploratory; full NAS ceiling pending larger budget run
 Q34A best compact candidate: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2250 params)
+Q34B best AUROC candidate: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params)
+Q34B best F1 candidate: q34b_trial_001 (AUROC 0.6415, F1 0.6356, 280 params)
 Binary benchmarking phase: CLOSED
 Multiclass: BLOCKED (requires Phase 3 + 4 + 5b)
 AWS/Ray: BLOCKED (requires Q35 validated)

@@ -1,0 +1,72 @@
+{
+  "slice": "Q38A",
+  "date": "2026-05-28",
+  "dry_run": false,
+  "epochs": 4,
+  "seed": 45,
+  "fixed_params": 2250,
+  "backbone_checkpoint": "checkpoints/c006_d040_classical_anchor.pt",
+  "dataset_root": "data/processed/vindr_binary_roi_224",
+  "variants": [
+    {
+      "variant": "baseline",
+      "auroc": 0.6834801251055694,
+      "f1": 0.6397694524495677,
+      "accuracy": 0.6389022628791526,
+      "params": 2250,
+      "latency_ms": 1.4664697024272755,
+      "wall_time_s": 278.7717037399998,
+      "preprocessing_overhead_ms": 0.0001344009069725871,
+      "delta_auroc_vs_baseline": 0.0,
+      "delta_f1_vs_baseline": 0.0
+    },
+    {
+      "variant": "clahe",
+      "auroc": 0.6961707301227853,
+      "f1": 0.6200967221923697,
+      "accuracy": 0.6596051998074145,
+      "params": 2250,
+      "latency_ms": 1.4041111222468317,
+      "wall_time_s": 551.1852239630243,
+      "preprocessing_overhead_ms": 7.613764099078253,
+      "delta_auroc_vs_baseline": 0.012690605017215861,
+      "delta_f1_vs_baseline": -0.019672730257198068
+    },
+    {
+      "variant": "histogram_equalization",
+      "auroc": 0.588506157829771,
+      "f1": 0.49026345933562426,
+      "accuracy": 0.5714973519499278,
+      "params": 2250,
+      "latency_ms": 1.403253122116439,
+      "wall_time_s": 288.10355128897936,
+      "preprocessing_overhead_ms": 0.29224249970866367,
+      "delta_auroc_vs_baseline": -0.09497396727579843,
+      "delta_f1_vs_baseline": -0.14950599311394347
+    },
+    {
+      "variant": "contrast_normalization",
+      "auroc": 0.6149829696795329,
+      "f1": 0.5104281009879253,
+      "accuracy": 0.5705344246509388,
+      "params": 2250,
+      "latency_ms": 1.401959820650518,
+      "wall_time_s": 428.27762545098085,
+      "preprocessing_overhead_ms": 4.0938512605498545,
+      "delta_auroc_vs_baseline": -0.06849715542603652,
+      "delta_f1_vs_baseline": -0.12934135146164238
+    },
+    {
+      "variant": "clahe_plus_normalization",
+      "auroc": 0.5969359344402269,
+      "f1": 0.32997676219984506,
+      "accuracy": 0.5835339431872894,
+      "params": 2250,
+      "latency_ms": 1.4483384019695222,
+      "wall_time_s": 808.8082358910178,
+      "preprocessing_overhead_ms": 14.937099641247187,
+      "delta_auroc_vs_baseline": -0.08654419066534258,
+      "delta_f1_vs_baseline": -0.30979269024972267
+    }
+  ]
+}

@@ -2,9 +2,9 @@
 
 **Project:** QStrata — medical imaging model optimization R&D  
 **Branch:** `feature/qnn-integration`  
-**Date:** 2026-05-27  
+**Date:** 2026-05-28  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q37 COMPLETE — Binary Uplift Roadmap defined; Q38 NEXT (Preprocessing Benchmark)
+**Status:** Q38A COMPLETE — CLAHE +1.27pp AUROC; Q39 NEXT (Augmentation Benchmark)
 
 ---
 
@@ -182,15 +182,16 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
 | Q37 | Binary Uplift Roadmap — Scientific Sequencing and Optimization Strategy | **COMPLETE** | Q35 ✓ |
-| Q38 | Binary Preprocessing Benchmark (CLAHE, histogram norm, ROI enhancement) | **NEXT** | Q37 ✓ |
-| Q39 | Binary Augmentation Benchmark | PLANNED | Q38 ✓ |
+| Q38A | Binary Preprocessing Benchmark (CLAHE, histogram norm, contrast norm) | **COMPLETE** | Q37 ✓ |
+| Q39 | Binary Augmentation Benchmark | **NEXT** | Q38A ✓ |
 | Q40 | Backbone / Extractor Benchmark (compact backbone comparison) | PLANNED | Q39 ✓ |
 | Q41 | Partial Fine-Tuning Benchmark | PLANNED | Q40 ✓ |
 | Q42 | CV Head Re-evaluation on Improved Extractors | PLANNED | Q41 ✓ |
 | Q43 | Binary Uplift Comparative Report | PLANNED | Q42 ✓ |
 
 **Phase 6b gate:** Q35 unified Pareto analysis complete ✓  
-**Phase 6b note (Q37):** COMPLETE — Binary uplift roadmap defined. Scientific sequencing rationale documented. Optimization dimensions and realistic target ranges established. Q38 (preprocessing benchmark) is now the immediate execution priority.
+**Phase 6b note (Q37):** COMPLETE — Binary uplift roadmap defined. Scientific sequencing rationale documented. Optimization dimensions and realistic target ranges established. Q38 (preprocessing benchmark) is now the immediate execution priority.  
+**Phase 6b note (Q38A):** COMPLETE — 5/5 preprocessing variants evaluated (baseline, CLAHE, histogram_equalization, contrast_normalization, clahe_plus_normalization) on q34a_trial_004 canonical compact classical model (2,250 params, frozen C006-D040 backbone). CLAHE is the only preprocessing that improves AUROC: +1.27pp (0.6835→0.6962), with −1.97pp F1 trade-off. All normalization-based methods (global HE, contrast norm, compound) degrade both AUROC and F1 substantially — mechanistically explained by distribution shift disrupting frozen backbone batch-norm calibration. CLAHE training overhead: ~104s/epoch vs ~53s/epoch baseline. CLAHE preprocessing overhead: 7.6ms/image. Recommendation: Use CLAHE for AUROC-focused runs; test augmentation in CLAHE+baseline parallel tracks in Q39. Reference: `reports/q38a_binary_preprocessing_benchmark.md`, `experiments/leaderboards/q38a_preprocessing_leaderboard.csv`.
 
 ---
 
@@ -251,8 +252,8 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 |---|---|---|
 | Q35 Pareto analysis | **COMPLETE** ✓ | Q34A–Q34C all complete |
 | Q37 Binary Uplift Roadmap | **COMPLETE** ✓ | Q35 ✓ |
-| Q38 Preprocessing Benchmark | **NEXT** | Q37 ✓ |
-| Q39 Augmentation Benchmark | PLANNED | Q38 ✓ |
+| Q38A Preprocessing Benchmark | **COMPLETE** ✓ | Q37 ✓ |
+| Q39 Augmentation Benchmark | **NEXT** | Q38A ✓ |
 | Q40 Extractor Benchmark | PLANNED | Q39 ✓ |
 | Q41 Partial Fine-Tuning | PLANNED | Q40 ✓ |
 | Q42 CV Head Re-evaluation | PLANNED | Q41 ✓ |

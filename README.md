@@ -6,17 +6,19 @@
 
 ## Project Status
 
-**Current phase:** Phase 6b — Binary Performance Uplift (NEXT: Q38 Preprocessing Benchmark)  
+**Current phase:** Phase 6b — Binary Performance Uplift (NEXT: Q39 Augmentation Benchmark)  
 **Roadmap:** [`docs/roadmaps/qstrata_master_research_roadmap.md`](docs/roadmaps/qstrata_master_research_roadmap.md)
 
-### Canonical Compact Candidates (Q35 Cross-Frontier Pareto)
+### Canonical Compact Candidates (Q35 Cross-Frontier Pareto + Q38A CLAHE)
 
 | Model | AUROC | F1 | Params | Source |
 |---|---|---|---|---|
+| Classical + CLAHE | **0.6962** | 0.6201 | 2,250 | q34a_trial_004 + Q38A |
 | Classical compact | 0.6835 | 0.6398 | 2,250 | q34a_trial_004 |
 | CV Quantum best F1 | 0.6623 | **0.6463** | **274** | q34c_trial_005 |
 
-DV quantum: entirely dominated by CV on all four objectives — excluded from further NAS.
+DV quantum: entirely dominated by CV on all four objectives — excluded from further NAS.  
+Q38A finding: CLAHE is the only preprocessing that improves AUROC (+1.27pp); all normalization methods degrade performance.
 
 ---
 
@@ -51,6 +53,8 @@ DV quantum: entirely dominated by CV on all four objectives — excluded from fu
 | Artifact | Path |
 |---|---|
 | Master roadmap | `docs/roadmaps/qstrata_master_research_roadmap.md` |
+| Q38A preprocessing report | `reports/q38a_binary_preprocessing_benchmark.md` |
+| Q38A preprocessing leaderboard | `experiments/leaderboards/q38a_preprocessing_leaderboard.csv` |
 | Q35 unified frontier | `experiments/leaderboards/q35_unified_frontier.csv` |
 | Q35 analysis report | `reports/q35_unified_pareto_frontier_analysis.md` |
 | SkyPilot smoke YAML | `infra/skypilot/q36a_single_node_smoke.yaml` |

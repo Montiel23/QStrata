@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-27  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q36B PARTIAL — dataset staging (S3) required before full smoke; Q36B-debug NEXT
+**Status:** Q37 COMPLETE — Binary Uplift Roadmap defined; Q38 NEXT (Preprocessing Benchmark)
 
 ---
 
@@ -22,9 +22,11 @@ QStrata is a systematic research program evaluating classical and quantum hybrid
 
 5. **Phase 5 — Local Multi-Objective NAS Pilot:** Run joint AUROC/F1/params/latency/stability optimization on single GPU.
 
-6. **Phase 6 — Distributed Scaling (IN PROGRESS):** Design and deploy AWS/Ray distributed NAS only after local NAS is validated. Q36A COMPLETE; Q36B next.
+6. **Phase 6 — Distributed Scaling (IN PROGRESS):** Validate and incrementally adopt SkyPilot single-node cloud execution for NAS acceleration. Bounded scope: single-node CPU, no Ray, no distributed NAS. Q36A COMPLETE; Q36B PARTIAL.
 
-7. **Phase 7 — Multiclass Benchmarking (BLOCKED):** Extend binary protocols to multiclass tasks after optimized binary baselines exist.
+6b. **Phase 6b — Binary Performance Uplift (NEXT):** Systematically optimize the binary classification pipeline before multiclass. Covers preprocessing (CLAHE, histogram norm, ROI enhancement), augmentation, backbone/extractor search, partial fine-tuning, and CV head re-evaluation on improved extractors. Required before multiclass to avoid multiclass benchmark rework.
+
+7. **Phase 7 — Multiclass Benchmarking (BLOCKED):** Extend binary protocols to multiclass tasks. Gated on Phase 6b (optimized binary baselines) — not just Phase 5. Starting multiclass before binary uplift completes would require repeating all multiclass benchmarks after binary improvements are applied.
 
 **Frozen binary benchmarks (canonical reference for all future work):**
 
@@ -144,23 +146,67 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Q36C | Full CV NAS Pilot on Cloud (if Q36B passes) | PLANNED | Q36B-debug ✓ |
 
 **Phase 6 gate:** Q35 unified Pareto analysis must be complete and validated  
-**Phase 6 note:** Design document only before any infrastructure is provisioned. No cloud resources before Q36 design is approved.  
+**Phase 6 note:** Incremental cloud validation — single-node CPU first, no Ray, no distributed NAS, no autonomous scaling. Cloud is justified for: bounded NAS acceleration, extractor sweeps, preprocessing ablations (Phase 6b). Cloud is NOT justified for: distributed NAS, massive search, large GPU clusters, autonomous scaling. Phase 6 runs in parallel with Phase 6b (binary uplift); cloud infrastructure serves Phase 6b experiments, not the other way around.  
 **Phase 6 note (Q36A):** COMPLETE (infra-validation design) — SkyPilot YAML created for single-node CPU smoke (`c6i.xlarge`, `--trials 1 --epochs 1`). Estimated smoke cost: < $0.03. Estimated full 5-trial CV pilot cost: $0.07–$0.17. No Ray, no distributed execution, no cloud launch performed. Execution requires explicit human approval and valid AWS credentials. Reference: `infra/skypilot/q36a_single_node_smoke.yaml`, `reports/q36a_skypilot_single_node_backend_pilot.md`.  
 **Phase 6 note (Q36B):** PARTIAL — live smoke executed on `c6i.xlarge` (us-east-1a); actual cost $0.022; 3 infrastructure blockers discovered: (1) workdir path (`/workspace` → `$HOME/sky_workdir`) RESOLVED; (2) checkpoint not synced (file_mounts fix) RESOLVED; (3) VinDr dataset not staged to S3 OPEN — primary blocker. AWS credentials valid; SkyPilot 0.12.3 installs and operates correctly; Python/PyTorch/medmnist environment validated on cloud instance. Reference: `reports/q36b_skypilot_live_runtime_cost_benchmark.md`.
+
+### Phase 6b — Binary Performance Uplift (NEXT)
+
+**Scientific rationale:** Q35 established an exploratory binary ceiling (AUROC ~0.68, F1 ~0.64) using 5-trial pilots with frozen pretrained backbones and no preprocessing or augmentation tuning. The current ceiling is not a performance limit — it reflects unoptimized input pipelines and unexplored architectural dimensions. Binary uplift must be completed before multiclass because:
+
+1. **Lower experimental cost:** Binary benchmarks run in minutes; multiclass benchmarks multiply cost by class count and task count.
+2. **Cleaner attribution:** Gains from preprocessing, augmentation, and extractor changes are interpretable against a known single-task baseline.
+3. **Controlled optimization:** Each dimension (preprocessing → augmentation → extractor → fine-tuning → CV head) can be ablated independently.
+4. **Prevents rework:** Starting multiclass benchmarks against the current unoptimized binary baselines would require repeating all multiclass results after binary improvements are applied.
+5. **Stable compact baselines:** Phase 6b produces the reference configurations for multiclass (Q43 comparative report) — the same canonical candidates that Phase 7 will re-evaluate at multiclass scale.
+
+**Optimization dimensions:**
+
+| Category | Specific Techniques |
+|---|---|
+| Preprocessing | CLAHE, histogram normalization, ROI region masking, contrast normalization, grayscale vs RGB |
+| Augmentation | Random flip/rotate/crop, MixUp, CutMix, augmentation policy tuning |
+| Extractor / Backbone | Compact backbone replacement (EfficientNet-B0, MobileNetV3, ConvNeXt-Tiny), backbone NAS |
+| Fine-tuning | Partial fine-tuning of pretrained backbone layers, learning rate scheduling |
+| CV Head | Re-evaluate q34c_trial_005 on improved extractors; re-run CV NAS with 4-epoch budget |
+
+**Realistic target ranges (from current exploratory ceiling):**
+
+| Horizon | AUROC Target | Basis |
+|---|---|---|
+| Current (exploratory) | ~0.68 | Q34A NAS pilot, 5 trials, 4 epochs, frozen backbone |
+| Near-term (Q38–Q41) | 0.72–0.78 | Preprocessing + augmentation + extractor tuning |
+| Mid-term (Q42–Q43) | 0.80–0.85 | Improved extractor + CV head re-evaluation |
+| Stretch | > 0.90 | Only if data quality and signal permit; not a hard target |
+
+| Slice | Description | Status | Blocked Until |
+|---|---|---|---|
+| Q37 | Binary Uplift Roadmap — Scientific Sequencing and Optimization Strategy | **COMPLETE** | Q35 ✓ |
+| Q38 | Binary Preprocessing Benchmark (CLAHE, histogram norm, ROI enhancement) | **NEXT** | Q37 ✓ |
+| Q39 | Binary Augmentation Benchmark | PLANNED | Q38 ✓ |
+| Q40 | Backbone / Extractor Benchmark (compact backbone comparison) | PLANNED | Q39 ✓ |
+| Q41 | Partial Fine-Tuning Benchmark | PLANNED | Q40 ✓ |
+| Q42 | CV Head Re-evaluation on Improved Extractors | PLANNED | Q41 ✓ |
+| Q43 | Binary Uplift Comparative Report | PLANNED | Q42 ✓ |
+
+**Phase 6b gate:** Q35 unified Pareto analysis complete ✓  
+**Phase 6b note (Q37):** COMPLETE — Binary uplift roadmap defined. Scientific sequencing rationale documented. Optimization dimensions and realistic target ranges established. Q38 (preprocessing benchmark) is now the immediate execution priority.
+
+---
 
 ### Phase 7 — Multiclass Benchmarking (BLOCKED)
 
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
-| M01 | VinDr-SpineXR Multiclass Classical Baseline | BLOCKED | Phase 3 + 4 + 5 |
-| M02 | VinDr-SpineXR Multiclass DV Hybrid | BLOCKED | Phase 3 + 4 + 5 |
-| M03 | VinDr-SpineXR Multiclass CV Hybrid | BLOCKED | Phase 3 + 4 + 5 |
-| M04 | PathMNIST Multiclass Classical Baseline | BLOCKED | Phase 3 + 4 + 5 |
-| M05 | PathMNIST Multiclass DV Hybrid | BLOCKED | Phase 3 + 4 + 5 |
+| M01 | VinDr-SpineXR Multiclass Classical Baseline | BLOCKED | Phase 6b ✓ (Q43) |
+| M02 | VinDr-SpineXR Multiclass DV Hybrid | BLOCKED | Phase 6b ✓ (Q43) |
+| M03 | VinDr-SpineXR Multiclass CV Hybrid | BLOCKED | Phase 6b ✓ (Q43) |
+| M04 | PathMNIST Multiclass Classical Baseline | BLOCKED | Phase 6b ✓ (Q43) |
+| M05 | PathMNIST Multiclass DV Hybrid | BLOCKED | Phase 6b ✓ (Q43) |
 
-**Phase 7 gate:** Phase 3 (classical ceiling), Phase 4 (quantum NAS), and Phase 5 (optimized binary release) must all be complete before multiclass work begins.
+**Phase 7 gate:** Phase 6b (Q37–Q43, binary uplift) must be complete before multiclass work begins. Phase 3, 4, and 5 alone are no longer sufficient — optimized binary baselines (Phase 6b) are required as the multiclass reference floor.
 
-**Why multiclass is gated on Phases 3–5:** Multiclass benchmarks must compare against optimized binary reference baselines, not the current unoptimized benchmarks. Starting multiclass before NAS completes would require re-evaluating multiclass results after NAS produces new binary references.
+**Why multiclass is gated on Phase 6b:** Multiclass benchmarks must compare against optimized binary reference baselines produced by Phase 6b. Running multiclass against the current unoptimized binary ceiling (~AUROC 0.68) would produce results that need to be repeated after binary uplift completes. Phase 6b prevents this rework by establishing stable, optimized compact baselines first.
 
 ### Deferred Binary Work
 
@@ -199,6 +245,19 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Q36B partial | **PARTIAL** | Q36A ✓ |
 | Q36B-debug | **NEXT** | Q36B partial ✓ |
 
+### Binary Uplift Gate (Phase 6b)
+
+| Gate | Status | Condition |
+|---|---|---|
+| Q35 Pareto analysis | **COMPLETE** ✓ | Q34A–Q34C all complete |
+| Q37 Binary Uplift Roadmap | **COMPLETE** ✓ | Q35 ✓ |
+| Q38 Preprocessing Benchmark | **NEXT** | Q37 ✓ |
+| Q39 Augmentation Benchmark | PLANNED | Q38 ✓ |
+| Q40 Extractor Benchmark | PLANNED | Q39 ✓ |
+| Q41 Partial Fine-Tuning | PLANNED | Q40 ✓ |
+| Q42 CV Head Re-evaluation | PLANNED | Q41 ✓ |
+| Q43 Binary Uplift Report | PLANNED | Q42 ✓ |
+
 ### Multiclass Gate
 
 | Gate | Status | Condition |
@@ -206,10 +265,10 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Phase 3 (Q32) complete | ✓ (design) | Q31A ✓ |
 | Phase 4 (Q33A) complete | ✓ (design) | Q32 ✓ |
 | Phase 4 (Q33B) complete | ✓ (design) | Q33A ✓ |
-| Phase 4 (Q33C) complete | PLANNED | Q33B ✓ |
-| Phase 5 (Q34A–Q34C) complete | PLANNED | Q33C complete |
+| Phase 5 (Q34A–Q34C) complete | ✓ | Q33C (realized in Q34A) |
 | Phase 5b (Q35) complete | **COMPLETE** ✓ | Q34A–Q34C complete |
-| Multiclass may begin | **BLOCKED** | All of the above complete |
+| **Phase 6b (Q37–Q43) complete** | **BLOCKED** | Q37–Q43 binary uplift pipeline |
+| Multiclass may begin | **BLOCKED** | Phase 6b ✓ (Q43 complete) |
 
 ### AWS/Ray Gate (Q36)
 
@@ -231,54 +290,48 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 
 **Multi-Objective Optimization:** No phase uses single-metric optimization. Pareto frontier exploration across AUROC, F1, parameter count, latency, stability, and generalization gap is required for all NAS phases.
 
-**Local-First Infrastructure:** Local automation and local NAS must be validated before any distributed infrastructure (AWS, Ray) is introduced.
+**Local-First Infrastructure:** Local automation and local NAS must be validated before any distributed infrastructure (AWS, Ray) is introduced. Cloud execution is a throughput accelerator, not an architectural decision driver.
 
 **Reproducibility-First:** Every experiment must be reconstructable from its frozen config and git commit SHA. Automation exists to enforce this, not to accelerate uncontrolled experimentation.
+
+**Binary Uplift Before Multiclass:** Binary classification performance must be systematically optimized (preprocessing, augmentation, extractor, fine-tuning, CV head) before extending to multiclass. The current exploratory binary ceiling (~AUROC 0.68) reflects unoptimized pipelines, not fundamental limits. Multiclass benchmarks conducted against an unoptimized binary baseline would require repeating once binary uplift is applied, multiplying cost and reducing interpretability. Phase 6b (Q37–Q43) establishes the optimized binary reference before Phase 7 begins.
+
+**Anti-Overengineering in Uplift:** Each Phase 6b slice benchmarks one dimension at a time (preprocessing → augmentation → extractor → fine-tuning → CV head). No combined ablations until individual effects are quantified. No speculative pipelines. No code written for future anticipated requirements.
 
 ---
 
 ## 5. Immediate Next Action
 
-**Q36 — AWS / Ray Distributed Scaling Design**
+**Q38 — Binary Preprocessing Benchmark**
 
-Q35 COMPLETE — three-frontier unified Pareto analysis done. Phase 5b Unified Pareto Analysis is complete.
+Q37 COMPLETE — Binary uplift roadmap defined; Phase 6b formally established. The immediate execution priority is Q38: benchmark preprocessing variants against the frozen binary baselines.
 
-**Q35 outcome summary:**
-- Cross-frontier Pareto set: 6 trials (4 classical + 2 CV + **0 DV**)
-- DV quantum: entirely dominated by CV trial_002 on all four objectives simultaneously (AUROC, F1, params, latency)
-- Canonical CV candidate: q34c_trial_005 (AUROC 0.6623, F1 **0.6463**, 274 params, 2.00 ms)
-- Canonical compact classical: q34a_trial_004 (AUROC **0.6835**, F1 0.6398, 2,250 params, 1.60 ms)
-- Six NAS hardening recommendations documented (prioritize CV; expand CV search space to 20+ trials, 4 epochs; drop DV from next quantum NAS run)
-- Unified leaderboard: `experiments/leaderboards/q35_unified_frontier.csv`
-- Reference report: `reports/q35_unified_pareto_frontier_analysis.md`
+**Current binary ceiling (exploratory, unoptimized):**
 
-**Q36A COMPLETE.** SkyPilot single-node smoke YAML defined: `infra/skypilot/q36a_single_node_smoke.yaml`. Instance: `c6i.xlarge` (4 vCPUs, $0.17/hr, CPU-only). Smoke: 1 trial × 1 epoch, < $0.03. Full 5-trial CV pilot estimate: $0.07–$0.17.
+| Metric | Best pilot value | Source |
+|---|---|---|
+| AUROC | 0.6869 | Q34A trial_003 (classical) |
+| F1 | 0.6463 | Q34C trial_005 (CV quantum) |
+| Params | 269 | Q34C trial_002 |
 
-**Q36B-debug — VinDr Dataset S3 Staging + Smoke Completion**
+**Q38 scope (preprocessing benchmark):**
+- Benchmark CLAHE preprocessing against raw VinDr-SpineXR ROI images
+- Benchmark histogram normalization variants
+- Benchmark contrast normalization approaches
+- Measure AUROC/F1 delta vs frozen Q17 and Q34A baselines
+- Single-seed, controlled experiment; no training-loop changes
+- Use canonical compact classical (q34a_trial_004) and CV (q34c_trial_005) as reference configurations
 
-Q36B PARTIAL. Live smoke executed; cloud environment validated. One blocker remains: VinDr dataset (`data/processed/vindr_binary_roi_224/`) not staged to S3. Both path and checkpoint blockers are resolved.
+**Phase 6b sequence:**
+Q38 (preprocessing) → Q39 (augmentation) → Q40 (extractor) → Q41 (fine-tuning) → Q42 (CV head) → Q43 (report)
 
-**Q36B-debug requires:**
+**Parallel: Q36B-debug (cloud, lower priority):**  
+VinDr dataset S3 staging unblocks cloud NAS runs. This runs in parallel with Phase 6b but does not block Q38.  
+Q36B-debug requires: `aws s3 cp data/processed/vindr_binary_roi_224/ s3://<bucket>/... --recursive`, then add `aws s3 sync` to YAML setup block.
 
-1. Stage VinDr dataset to S3:
-   ```bash
-   aws s3 cp data/processed/vindr_binary_roi_224/ \
-     s3://<bucket>/qstrata/vindr_binary_roi_224/ --recursive
-   ```
+**Q33C note:** Q33C was effectively realized within Q34A — no separate design document required.
 
-2. Add S3 download to YAML `setup:` block:
-   ```bash
-   aws s3 sync s3://<bucket>/qstrata/vindr_binary_roi_224/ \
-     ~/sky_workdir/data/processed/vindr_binary_roi_224/
-   ```
-
-3. Re-launch smoke (`--trials 1 --epochs 1 --idle-minutes-to-autostop 10`)
-
-4. Record measured wall time vs Q34C local (335.6s for 5 trials × 2 epochs)
-
-Gate: Q36B ✓ + S3 bucket created + VinDr dataset staged + human approval
-
-**Q33C note:** Q33C (NAS execution protocol design) was effectively realized through the Q34A implementation. The incremental 5-trial/4-epoch pilot protocol, random sampling via `random.choice`, per-trial YAML config generation, sequential Q31 runner invocation, and Pareto CSV output were all defined and validated within Q34A. No separate Q33C design document is required before Q34C proceeds.
+---
 
 ---
 
@@ -302,23 +355,33 @@ Q34C status: COMPLETE — 5/5 trials PASS; Pareto set: 2 trials; wall time 335.6
 Q35 status: COMPLETE — cross-frontier Pareto set: 6 trials (4 classical + 2 CV + 0 DV); DV fully dominated by CV; canonical CV: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params); canonical classical: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2250 params); unified leaderboard: experiments/leaderboards/q35_unified_frontier.csv; reference: reports/q35_unified_pareto_frontier_analysis.md
 Q36A status: COMPLETE — SkyPilot single-node smoke YAML defined; c6i.xlarge CPU; smoke < $0.03; full CV pilot $0.07–$0.17; no cloud launch; reference: infra/skypilot/q36a_single_node_smoke.yaml, reports/q36a_skypilot_single_node_backend_pilot.md
 Q36B status: PARTIAL — live smoke on c6i.xlarge; actual cost $0.022; 2 path blockers resolved; VinDr dataset staging OPEN; reference: reports/q36b_skypilot_live_runtime_cost_benchmark.md
-Q36B-debug status: NEXT — stage vindr_binary_roi_224 to S3; add aws s3 sync to setup block; re-run smoke to completion; record wall time vs Q34C local baseline (335.6s)
-Q36C status: PLANNED — full cloud CV NAS pilot (if Q36B passes)
+Q36B-debug status: PARALLEL (lower priority) — stage vindr_binary_roi_224 to S3; add aws s3 sync to setup block; re-run smoke; record wall time vs Q34C baseline (335.6s)
+Q36C status: PLANNED — full cloud CV NAS pilot (if Q36B-debug passes)
+Q37 status: COMPLETE — Phase 6b binary uplift roadmap defined; scientific rationale documented; optimization dimensions and target ranges established; Q38 NEXT
+Q38 status: NEXT — binary preprocessing benchmark (CLAHE, histogram norm, ROI enhancement, contrast norm)
+Q39 status: PLANNED — binary augmentation benchmark
+Q40 status: PLANNED — backbone/extractor benchmark (compact backbone comparison)
+Q41 status: PLANNED — partial fine-tuning benchmark
+Q42 status: PLANNED — CV head re-evaluation on improved extractors
+Q43 status: PLANNED — binary uplift comparative report
 Phase 2 (Experiment Automation): COMPLETE
 Phase 3 (Classical NAS Ceiling): IN PROGRESS — Q32 design complete; Q34A pilot PASS (4-epoch, 5-trial; not definitive ceiling)
 Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C realized; Q34B COMPLETE; Q34C COMPLETE
 Phase 5 (Local NAS Pilot): COMPLETE — Q34A COMPLETE; Q34B COMPLETE; Q34B-HF COMPLETE; Q34B-Parallel-Lite COMPLETE; EXP-005 COMPLETE; Q34B-full-lite COMPLETE; Q34C-Preflight COMPLETE; Q34C-Smoke COMPLETE; Q34C COMPLETE
 Phase 5b (Unified Pareto Analysis): COMPLETE — Q35 COMPLETE; 6-trial cross-frontier Pareto set; Q36 unblocked
+Phase 6 (Cloud Validation): IN PROGRESS — Q36A COMPLETE; Q36B PARTIAL; Q36B-debug NEXT (parallel to Phase 6b)
+Phase 6b (Binary Performance Uplift): IN PROGRESS — Q37 COMPLETE; Q38 NEXT
+Phase 7 (Multiclass): BLOCKED — requires Phase 6b (Q43) complete; NOT just Phases 3–5
 CV quantum pilot ceiling: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params) — pilot exploratory; 2-epoch budget; not definitive ceiling
-DV quantum pilot ceiling: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params) — DOMINATED by CV cross-frontier; DV excluded from Q36 NAS planning
+DV quantum pilot ceiling: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params) — DOMINATED by CV cross-frontier; DV excluded from Phase 6b
 Classical pilot ceiling: q34a_trial_005 (AUROC 0.6867, F1 0.6287, 4754 params) — exploratory; 5-trial pilot; not definitive ceiling
 Q34A best compact candidate: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2250 params)
-Q34B best AUROC candidate: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params) — dominated cross-frontier
-Q34B best F1 candidate: q34b_trial_001 (AUROC 0.6415, F1 0.6356, 280 params) — dominated cross-frontier
 Q35 canonical CV: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params, 2.00 ms)
 Q35 canonical classical compact: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2250 params, 1.60 ms)
+Binary uplift target (near-term, Q38–Q41): AUROC 0.72–0.78
+Binary uplift target (mid-term, Q42–Q43): AUROC 0.80–0.85
 Binary benchmarking phase: CLOSED
-Multiclass: BLOCKED (requires Phase 3 + 4 + 5b)
-AWS/Ray: NEXT — Q35 validated; Q36 design document required before cloud provisioning
+Multiclass: BLOCKED (requires Phase 6b Q43 — binary uplift complete; NOT just Phase 3 + 4 + 5b)
+AWS/Ray: PARALLEL — Q36B-debug next; no distributed NAS until Phase 6b validates cloud value
 Object detection: BLOCKED (out of current roadmap scope)
 ```

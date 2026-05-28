@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-27  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q35 COMPLETE — Q36 NEXT (Distributed Scaling Design)
+**Status:** Q36A COMPLETE — Q36B NEXT (Local vs SkyPilot Runtime/Cost Comparison)
 
 ---
 
@@ -22,7 +22,7 @@ QStrata is a systematic research program evaluating classical and quantum hybrid
 
 5. **Phase 5 — Local Multi-Objective NAS Pilot:** Run joint AUROC/F1/params/latency/stability optimization on single GPU.
 
-6. **Phase 6 — Distributed Scaling (BLOCKED):** Design and deploy AWS/Ray distributed NAS only after local NAS is validated.
+6. **Phase 6 — Distributed Scaling (IN PROGRESS):** Design and deploy AWS/Ray distributed NAS only after local NAS is validated. Q36A COMPLETE; Q36B next.
 
 7. **Phase 7 — Multiclass Benchmarking (BLOCKED):** Extend binary protocols to multiclass tasks after optimized binary baselines exist.
 
@@ -134,14 +134,17 @@ These values are frozen. Future comparative work must reference them explicitly.
 **Phase 5b note:** Full three-frontier comparison: classical (Q34A) vs DV (Q34B) vs CV (Q34C) Pareto frontiers. Stability taxonomy analysis for CV trials. Identifies which Q33A/Q33B dimensions drive Pareto-optimal quantum performance. Produces NAS hardening recommendations.  
 **Phase 5b note (Q35):** COMPLETE — 6-trial cross-frontier Pareto set (4 classical + 2 CV + 0 DV). DV is fully dominated by CV trial_002 on all four objectives simultaneously. Classical holds the AUROC advantage (0.6826–0.6869 vs 0.6617–0.6623); CV achieves best F1 cross-frontier (0.6463) and fewest params (269). Canonical CV candidate: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params). Canonical classical compact: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2,250 params). Six NAS hardening recommendations documented. Q36 now unblocked. Reference: `reports/q35_unified_pareto_frontier_analysis.md`.
 
-### Phase 6 — Distributed Scaling (BLOCKED)
+### Phase 6 — Distributed Scaling (IN PROGRESS)
 
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
-| Q36 | AWS / Ray Distributed Scaling Design | **NEXT** | Q35 ✓ |
+| Q36A | SkyPilot Single-Node Smoke Validation | **COMPLETE** | Q35 ✓ |
+| Q36B | Local vs SkyPilot Runtime/Cost Comparison | **NEXT** | Q36A ✓ |
+| Q36C | Full CV NAS Pilot on Cloud (if Q36B passes) | PLANNED | Q36B ✓ |
 
 **Phase 6 gate:** Q35 unified Pareto analysis must be complete and validated  
-**Phase 6 note:** Design document only before any infrastructure is provisioned. No cloud resources before Q36 design is approved.
+**Phase 6 note:** Design document only before any infrastructure is provisioned. No cloud resources before Q36 design is approved.  
+**Phase 6 note (Q36A):** COMPLETE (infra-validation design) — SkyPilot YAML created for single-node CPU smoke (`c6i.xlarge`, `--trials 1 --epochs 1`). Estimated smoke cost: < $0.03. Estimated full 5-trial CV pilot cost: $0.07–$0.17. No Ray, no distributed execution, no cloud launch performed. Execution requires explicit human approval and valid AWS credentials. Reference: `infra/skypilot/q36a_single_node_smoke.yaml`, `reports/q36a_skypilot_single_node_backend_pilot.md`.
 
 ### Phase 7 — Multiclass Benchmarking (BLOCKED)
 
@@ -190,7 +193,8 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Q34C-Smoke complete | ✓ | CV pipeline validated end-to-end; AUROC=0.6540, stability=valid |
 | Q34C complete | ✓ | 5/5 PASS, wall 335.6 s, best AUROC 0.6623 (trial_005, 274 params), best F1 0.6463 |
 | Q35 complete | **COMPLETE** ✓ | Q34A + Q34B + Q34C all complete |
-| Q36 unblocked | **NEXT** | Q35 ✓ |
+| Q36A complete | **COMPLETE** ✓ | Q35 ✓ |
+| Q36B unblocked | **NEXT** | Q36A ✓ |
 
 ### Multiclass Gate
 
@@ -210,8 +214,9 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 |---|---|---|
 | Q34A–Q34C local NAS validated | PLANNED | — |
 | Q35 Pareto analysis complete | **COMPLETE** ✓ | Q34A–Q34C complete |
-| Q36 design approved | BLOCKED | Q36 design doc not yet written |
-| Cloud infrastructure provisioned | BLOCKED | Q36 design approved |
+| Q36A YAML created | **COMPLETE** ✓ | Q36A ✓ |
+| Q36B live smoke | **NEXT** | Q36A ✓ + AWS credentials + human approval |
+| Cloud infrastructure provisioned | BLOCKED | Q36B pass + human approval |
 
 ---
 
@@ -244,10 +249,30 @@ Q35 COMPLETE — three-frontier unified Pareto analysis done. Phase 5b Unified P
 - Unified leaderboard: `experiments/leaderboards/q35_unified_frontier.csv`
 - Reference report: `reports/q35_unified_pareto_frontier_analysis.md`
 
-**Q36 scope (design document only — no cloud resources):**
-Q36 produces a design document for AWS/Ray distributed NAS scaling, informed by Q35 hardening recommendations. No cloud infrastructure may be provisioned before Q36 design is approved. Design should address: Ray cluster architecture for CV NAS, trial parallelism beyond 5-worker local limit, S3 artifact storage, cost modeling for 20+ trial runs.
+**Q36A COMPLETE.** SkyPilot single-node smoke YAML defined: `infra/skypilot/q36a_single_node_smoke.yaml`. Instance: `c6i.xlarge` (4 vCPUs, $0.17/hr, CPU-only). Smoke: 1 trial × 1 epoch, < $0.03. Full 5-trial CV pilot estimate: $0.07–$0.17.
 
-Gate: Q35 ✓
+**Q36B — Local vs SkyPilot Runtime/Cost Comparison**
+
+Q36B performs the actual cloud smoke launch and compares measured wall time + cost against local baseline (Q34C full: 335.6s). This is the go/no-go decision point for cloud-scaled NAS.
+
+**Q36B execution requires:** valid AWS credentials, `sky check` confirmation, explicit human approval before `sky launch`.
+
+```bash
+# Verify credentials
+sky check
+
+# Dry-run first (no cost)
+sky launch infra/skypilot/q36a_single_node_smoke.yaml --dryrun
+
+# Launch smoke (human approval required)
+sky launch infra/skypilot/q36a_single_node_smoke.yaml \
+  --cloud aws --yes --idle-minutes-to-autostop 10
+
+# Terminate after run
+sky down qstrata-q36a-cv-smoke-cpu
+```
+
+Gate: Q36A ✓ + AWS credentials ✓ + human approval
 
 **Q33C note:** Q33C (NAS execution protocol design) was effectively realized through the Q34A implementation. The incremental 5-trial/4-epoch pilot protocol, random sampling via `random.choice`, per-trial YAML config generation, sequential Q31 runner invocation, and Pareto CSV output were all defined and validated within Q34A. No separate Q33C design document is required before Q34C proceeds.
 
@@ -271,7 +296,9 @@ Q34C-Preflight status: COMPLETE — infra ready; blockers resolved (scripts now 
 Q34C-Smoke status: COMPLETE — CV pipeline validated; AUROC=0.6540; stability=valid; all 12 checks PASS; reference: reports/q34c_smoke_validation.md
 Q34C status: COMPLETE — 5/5 trials PASS; Pareto set: 2 trials; wall time 335.6s; best AUROC 0.6623 (trial_005, n_modes=1 depth=2 sq=1.5, 274 params); best F1 0.6463; all stability=valid; reference: reports/q34c_cv_nas_pilot_mvp.md
 Q35 status: COMPLETE — cross-frontier Pareto set: 6 trials (4 classical + 2 CV + 0 DV); DV fully dominated by CV; canonical CV: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params); canonical classical: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2250 params); unified leaderboard: experiments/leaderboards/q35_unified_frontier.csv; reference: reports/q35_unified_pareto_frontier_analysis.md
-Q36 status: NEXT — AWS/Ray distributed scaling design (design doc only; no cloud resources before Q36 approved)
+Q36A status: COMPLETE — SkyPilot single-node smoke YAML defined; c6i.xlarge CPU; smoke < $0.03; full CV pilot $0.07–$0.17; no cloud launch; reference: infra/skypilot/q36a_single_node_smoke.yaml, reports/q36a_skypilot_single_node_backend_pilot.md
+Q36B status: NEXT — live smoke launch; local vs cloud runtime/cost comparison; requires AWS credentials + human approval
+Q36C status: PLANNED — full cloud CV NAS pilot (if Q36B passes)
 Phase 2 (Experiment Automation): COMPLETE
 Phase 3 (Classical NAS Ceiling): IN PROGRESS — Q32 design complete; Q34A pilot PASS (4-epoch, 5-trial; not definitive ceiling)
 Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C realized; Q34B COMPLETE; Q34C COMPLETE

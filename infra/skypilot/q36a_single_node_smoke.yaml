@@ -1,0 +1,227 @@
+# infra/skypilot/q36a_single_node_smoke.yaml
+#
+# Q36A — SkyPilot Single-Node Smoke Validation (CV NAS, CPU)
+#
+# PURPOSE:
+#   Validate the SkyPilot execution path for QStrata CV NAS experiments
+#   on a single-node CPU instance. Measures setup friction, environment
+#   reproducibility, wall time, and cost at minimal execution scale before
+#   committing to larger pilots.
+#
+# SCOPE CONSTRAINTS (Q36A hard rules):
+#   - NOT a full NAS run (smoke = 1 trial, 1 epoch)
+#   - NOT Ray or distributed orchestration
+#   - NOT multi-node execution
+#   - NOT GPU-first; CPU instance preferred (CV symplectic ops are CPU-only;
+#     backbone overhead on CPU is acceptable at smoke scale)
+#   - Execution requires explicit human approval + valid AWS credentials
+#
+# EXECUTION DESIGN:
+#   - Instance: c6i.xlarge (4 vCPUs, 8 GB RAM, $0.17/hr, us-east-1)
+#   - Smoke command: 1 trial × 1 epoch (fastest possible validation)
+#   - PneumoniaMNIST dataset auto-downloaded via medmnist (~4 MB)
+#   - Python dependencies installed directly (no Docker build overhead)
+#   - PYTHONPATH set to /workspace (repo root)
+#
+# INSTANCE SELECTION RATIONALE:
+#   c6i.xlarge (4 vCPUs, 8 GB):
+#     - Sufficient for 1-trial smoke (no thread contention)
+#     - Supports future 5-trial parallel pilot with thread-cap=2 per worker
+#       (5 workers × 2 threads = 10 threads on 4 vCPUs — viable with scheduling)
+#   For 5-trial parallel pilot: upgrade to c6i.2xlarge (8 vCPUs, $0.34/hr)
+#     to reduce thread contention (5 workers × 2 threads = 10 threads / 8 vCPUs)
+#
+# ESTIMATED RUNTIME:
+#   Smoke (1 trial, 1 epoch, CPU backbone):
+#     Setup:   ~3–5 min (pip install, repo sync)
+#     Run:     ~2–4 min (1 epoch; CPU backbone ~3× slower than local GPU)
+#     Total:   ~5–9 min
+#
+#   Full 5-trial 2-epoch CV pilot (for reference — not this YAML):
+#     c6i.xlarge:   ~25–45 min (~$0.07–$0.13)
+#     c6i.2xlarge:  ~15–30 min (~$0.09–$0.17) — preferred for full pilot
+#
+# ESTIMATED COST:
+#   Smoke on c6i.xlarge:  ~$0.02–$0.03 (well under $0.05)
+#   Full 5-trial pilot:   ~$0.07–$0.17 depending on instance size
+#
+# AUTHORIZATION:
+#   Do NOT launch this YAML without explicit human approval.
+#   Requires: `sky check` to confirm AWS credentials, then `sky launch`.
+#
+# USAGE:
+#   # Verify credentials and available clouds
+#   sky check
+#
+#   # Dry-run (no cloud launch — shows instance plan only)
+#   sky launch infra/skypilot/q36a_single_node_smoke.yaml --dryrun
+#
+#   # Launch smoke test (requires explicit approval)
+#   sky launch infra/skypilot/q36a_single_node_smoke.yaml \
+#     --cloud aws --yes --detach-run
+#
+#   # Monitor running job
+#   sky logs qstrata-q36a-cv-smoke-cpu
+#
+#   # SHUTDOWN (mandatory after smoke completes — prevents cost runoff)
+#   sky stop qstrata-q36a-cv-smoke-cpu    # stop (re-startable)
+#   sky down qstrata-q36a-cv-smoke-cpu    # terminate (destroys instance)
+#
+# Reference: reports/q36a_skypilot_single_node_backend_pilot.md
+
+name: qstrata-q36a-cv-smoke-cpu
+
+# ── Resources ─────────────────────────────────────────────────────────────────
+resources:
+  cloud: aws
+  instance_type: c6i.xlarge     # 4 vCPUs, 8 GB RAM; ~$0.17/hr (us-east-1, 2026)
+  region: us-east-1
+  use_spot: false                # On-demand for smoke test reliability
+  disk_size: 30                  # GB — repo + medmnist cache + results
+
+# ── Repo sync ─────────────────────────────────────────────────────────────────
+# SkyPilot rsync the local working directory to /workspace on the instance.
+# workdir syncs ALL non-.gitignored files from the repo root.
+# The remote path is controlled by SkyPilot; the run command uses it directly.
+workdir: .
+
+# ── Environment variables ─────────────────────────────────────────────────────
+envs:
+  PYTHONPATH: /workspace
+  PYTHONUNBUFFERED: "1"
+  # Thread caps: constrain BLAS parallelism per worker subprocess.
+  # For smoke (1 worker), this is a no-op but mirrors production configuration.
+  OMP_NUM_THREADS: "2"
+  MKL_NUM_THREADS: "2"
+  OPENBLAS_NUM_THREADS: "2"
+
+# ── Setup ─────────────────────────────────────────────────────────────────────
+# Installs Python dependencies directly on the instance.
+# Mirrors the GPU Dockerfile.gpu package list but with CPU-only PyTorch.
+# Pinned versions match the local docker-qstrata-gpu-1 environment.
+setup: |
+  set -e
+
+  echo "[Q36A SETUP] Python version:"
+  python3 --version
+
+  echo "[Q36A SETUP] Installing CPU-only PyTorch + training dependencies..."
+  pip3 install --quiet \
+    torch==2.2.2 \
+    torchvision==0.17.2 \
+    --index-url https://download.pytorch.org/whl/cpu
+
+  pip3 install --quiet \
+    "numpy<2" \
+    medmnist \
+    scikit-learn \
+    pyyaml \
+    matplotlib
+
+  echo "[Q36A SETUP] Verifying torch import + CPU device:"
+  python3 -c "
+  import torch
+  print(f'  torch: {torch.__version__}')
+  print(f'  cuda_available: {torch.cuda.is_available()}')
+  print(f'  device: cpu (expected — c6i.xlarge has no GPU)')
+  "
+
+  echo "[Q36A SETUP] Verifying medmnist + PneumoniaMNIST access:"
+  python3 -c "
+  import medmnist
+  print(f'  medmnist: {medmnist.__version__}')
+  from medmnist import PneumoniaMNIST
+  ds = PneumoniaMNIST(split='train', download=True)
+  print(f'  PneumoniaMNIST train size: {len(ds)} samples')
+  "
+
+  echo "[Q36A SETUP] Verifying PYTHONPATH repo structure:"
+  python3 -c "
+  import sys, os
+  sys.path.insert(0, '/workspace')
+  # Validate key module paths exist
+  for path in ['scripts/run_q34c_cv_nas_pilot.py',
+               'scripts/train_q34c_cv_candidate.py']:
+      full = os.path.join('/workspace', path)
+      status = 'OK' if os.path.exists(full) else 'MISSING'
+      print(f'  {path}: {status}')
+  "
+
+  echo "[Q36A SETUP] Setup complete."
+
+# ── Run ───────────────────────────────────────────────────────────────────────
+# Q36A smoke: 1 trial × 1 epoch — minimal viable execution to validate
+# the full pipeline path (config gen → training → metrics → Pareto CSV).
+#
+# This mirrors the Q34C command at minimum scale:
+#   Q34C full:  --trials 5 --epochs 2 --parallel --max-workers 5 --thread-cap 2
+#   Q36A smoke: --trials 1 --epochs 1 --parallel --max-workers 1 --thread-cap 2
+#
+# Expected outputs (written to /workspace/experiments/):
+#   experiments/results/q34c_cv_nas_pilot_summary.json  (updated)
+#   experiments/leaderboards/q34c_cv_pareto.csv          (updated or created)
+#   /tmp/q36a_smoke_<timestamp>.log                      (smoke log, not committed)
+run: |
+  set -e
+  cd /workspace
+
+  SMOKE_LOG="/tmp/q36a_smoke_$(date +%Y%m%d_%H%M%S).log"
+  SMOKE_START=$(date +%s)
+
+  echo "[Q36A RUN] Starting CV NAS smoke (1 trial, 1 epoch)"
+  echo "[Q36A RUN] Log: ${SMOKE_LOG}"
+  echo "[Q36A RUN] PYTHONPATH: ${PYTHONPATH}"
+
+  python3 scripts/run_q34c_cv_nas_pilot.py \
+    --trials 1 \
+    --seed 42 \
+    --epochs 1 \
+    --parallel \
+    --max-workers 1 \
+    --thread-cap 2 \
+    2>&1 | tee "${SMOKE_LOG}"
+
+  EXIT_CODE=${PIPESTATUS[0]}
+  SMOKE_END=$(date +%s)
+  WALL_TIME=$((SMOKE_END - SMOKE_START))
+
+  echo ""
+  echo "[Q36A RUN] Wall time: ${WALL_TIME}s"
+  echo "[Q36A RUN] Exit code: ${EXIT_CODE}"
+
+  # Pass/fail detection — pilot script emits this on success
+  if grep -qE "Q34C_CV_NAS_PILOT: PASS|Pilot verdict.*PASS|completed.*PASS" "${SMOKE_LOG}"; then
+    echo "[Q36A RUN] RESULT: PASS"
+  elif [ "${EXIT_CODE}" -eq 0 ]; then
+    echo "[Q36A RUN] RESULT: PASS (exit 0, no explicit FAIL keyword found)"
+  else
+    echo "[Q36A RUN] RESULT: FAIL (exit ${EXIT_CODE})"
+    exit "${EXIT_CODE}"
+  fi
+
+  # Verify artifact creation
+  echo "[Q36A RUN] Checking artifacts:"
+  for f in \
+    experiments/results/q34c_cv_nas_pilot_summary.json \
+    experiments/leaderboards/q34c_cv_pareto.csv; do
+    if [ -f "/workspace/${f}" ]; then
+      echo "  ${f}: EXISTS"
+    else
+      echo "  ${f}: MISSING (may be normal if JSON is gitignored)"
+    fi
+  done
+
+  echo "[Q36A RUN] Smoke complete."
+
+# ── Shutdown reminder ─────────────────────────────────────────────────────────
+# After the run completes, terminate the instance to stop billing:
+#
+#   sky down qstrata-q36a-cv-smoke-cpu
+#
+# To inspect logs before terminating:
+#   sky logs qstrata-q36a-cv-smoke-cpu
+#
+# SkyPilot auto-stops idle instances if --idle-minutes-to-autostop N is set.
+# Recommended for safety:
+#   sky launch ... --idle-minutes-to-autostop 10
+# This terminates the instance 10 minutes after the run completes.

@@ -80,14 +80,23 @@ resources:
   disk_size: 30                  # GB — repo + medmnist cache + results
 
 # ── Repo sync ─────────────────────────────────────────────────────────────────
-# SkyPilot rsync the local working directory to /workspace on the instance.
-# workdir syncs ALL non-.gitignored files from the repo root.
-# The remote path is controlled by SkyPilot; the run command uses it directly.
+# SkyPilot rsync the local working directory to ~/sky_workdir on the instance.
+# workdir syncs non-.gitignored files. Gitignored artifacts (checkpoints,
+# datasets, logs) must be listed explicitly in file_mounts below.
 workdir: .
+
+# ── Explicit artifact mounts ──────────────────────────────────────────────────
+# The pretrained backbone checkpoint is gitignored (binary weights, ~52 KB).
+# file_mounts copies it explicitly to the correct path on the instance.
+# NOTE: SkyPilot resolves local paths relative to the workdir root.
+file_mounts:
+  ~/sky_workdir/checkpoints/c006_d040_classical_anchor.pt: checkpoints/c006_d040_classical_anchor.pt
 
 # ── Environment variables ─────────────────────────────────────────────────────
 envs:
-  PYTHONPATH: /workspace
+  # SkyPilot syncs workdir to ~/sky_workdir on the instance (not /workspace).
+  # PYTHONPATH must point to the synced repo root so qcore/ and scripts/ resolve.
+  PYTHONPATH: /home/ubuntu/sky_workdir
   PYTHONUNBUFFERED: "1"
   # Thread caps: constrain BLAS parallelism per worker subprocess.
   # For smoke (1 worker), this is a no-op but mirrors production configuration.
@@ -136,13 +145,14 @@ setup: |
   "
 
   echo "[Q36A SETUP] Verifying PYTHONPATH repo structure:"
+  WORKDIR="${HOME}/sky_workdir"
   python3 -c "
   import sys, os
-  sys.path.insert(0, '/workspace')
-  # Validate key module paths exist
+  workdir = os.path.join(os.environ['HOME'], 'sky_workdir')
+  sys.path.insert(0, workdir)
   for path in ['scripts/run_q34c_cv_nas_pilot.py',
                'scripts/train_q34c_cv_candidate.py']:
-      full = os.path.join('/workspace', path)
+      full = os.path.join(workdir, path)
       status = 'OK' if os.path.exists(full) else 'MISSING'
       print(f'  {path}: {status}')
   "
@@ -163,7 +173,9 @@ setup: |
 #   /tmp/q36a_smoke_<timestamp>.log                      (smoke log, not committed)
 run: |
   set -e
-  cd /workspace
+  # SkyPilot syncs workdir to ~/sky_workdir — use $HOME to resolve portably
+  WORKDIR="${HOME}/sky_workdir"
+  cd "${WORKDIR}"
 
   SMOKE_LOG="/tmp/q36a_smoke_$(date +%Y%m%d_%H%M%S).log"
   SMOKE_START=$(date +%s)
@@ -204,7 +216,7 @@ run: |
   for f in \
     experiments/results/q34c_cv_nas_pilot_summary.json \
     experiments/leaderboards/q34c_cv_pareto.csv; do
-    if [ -f "/workspace/${f}" ]; then
+    if [ -f "${WORKDIR}/${f}" ]; then
       echo "  ${f}: EXISTS"
     else
       echo "  ${f}: MISSING (may be normal if JSON is gitignored)"

@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-27  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q36A COMPLETE — Q36B NEXT (Local vs SkyPilot Runtime/Cost Comparison)
+**Status:** Q36B PARTIAL — dataset staging (S3) required before full smoke; Q36B-debug NEXT
 
 ---
 
@@ -139,12 +139,14 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Slice | Description | Status | Blocked Until |
 |---|---|---|---|
 | Q36A | SkyPilot Single-Node Smoke Validation | **COMPLETE** | Q35 ✓ |
-| Q36B | Local vs SkyPilot Runtime/Cost Comparison | **NEXT** | Q36A ✓ |
-| Q36C | Full CV NAS Pilot on Cloud (if Q36B passes) | PLANNED | Q36B ✓ |
+| Q36B | Local vs SkyPilot Runtime/Cost Comparison | **PARTIAL** | Q36A ✓ |
+| Q36B-debug | VinDr Dataset S3 Staging + Smoke Completion | **NEXT** | Q36B ✓ |
+| Q36C | Full CV NAS Pilot on Cloud (if Q36B passes) | PLANNED | Q36B-debug ✓ |
 
 **Phase 6 gate:** Q35 unified Pareto analysis must be complete and validated  
 **Phase 6 note:** Design document only before any infrastructure is provisioned. No cloud resources before Q36 design is approved.  
-**Phase 6 note (Q36A):** COMPLETE (infra-validation design) — SkyPilot YAML created for single-node CPU smoke (`c6i.xlarge`, `--trials 1 --epochs 1`). Estimated smoke cost: < $0.03. Estimated full 5-trial CV pilot cost: $0.07–$0.17. No Ray, no distributed execution, no cloud launch performed. Execution requires explicit human approval and valid AWS credentials. Reference: `infra/skypilot/q36a_single_node_smoke.yaml`, `reports/q36a_skypilot_single_node_backend_pilot.md`.
+**Phase 6 note (Q36A):** COMPLETE (infra-validation design) — SkyPilot YAML created for single-node CPU smoke (`c6i.xlarge`, `--trials 1 --epochs 1`). Estimated smoke cost: < $0.03. Estimated full 5-trial CV pilot cost: $0.07–$0.17. No Ray, no distributed execution, no cloud launch performed. Execution requires explicit human approval and valid AWS credentials. Reference: `infra/skypilot/q36a_single_node_smoke.yaml`, `reports/q36a_skypilot_single_node_backend_pilot.md`.  
+**Phase 6 note (Q36B):** PARTIAL — live smoke executed on `c6i.xlarge` (us-east-1a); actual cost $0.022; 3 infrastructure blockers discovered: (1) workdir path (`/workspace` → `$HOME/sky_workdir`) RESOLVED; (2) checkpoint not synced (file_mounts fix) RESOLVED; (3) VinDr dataset not staged to S3 OPEN — primary blocker. AWS credentials valid; SkyPilot 0.12.3 installs and operates correctly; Python/PyTorch/medmnist environment validated on cloud instance. Reference: `reports/q36b_skypilot_live_runtime_cost_benchmark.md`.
 
 ### Phase 7 — Multiclass Benchmarking (BLOCKED)
 
@@ -194,7 +196,8 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Q34C complete | ✓ | 5/5 PASS, wall 335.6 s, best AUROC 0.6623 (trial_005, 274 params), best F1 0.6463 |
 | Q35 complete | **COMPLETE** ✓ | Q34A + Q34B + Q34C all complete |
 | Q36A complete | **COMPLETE** ✓ | Q35 ✓ |
-| Q36B unblocked | **NEXT** | Q36A ✓ |
+| Q36B partial | **PARTIAL** | Q36A ✓ |
+| Q36B-debug | **NEXT** | Q36B partial ✓ |
 
 ### Multiclass Gate
 
@@ -251,28 +254,29 @@ Q35 COMPLETE — three-frontier unified Pareto analysis done. Phase 5b Unified P
 
 **Q36A COMPLETE.** SkyPilot single-node smoke YAML defined: `infra/skypilot/q36a_single_node_smoke.yaml`. Instance: `c6i.xlarge` (4 vCPUs, $0.17/hr, CPU-only). Smoke: 1 trial × 1 epoch, < $0.03. Full 5-trial CV pilot estimate: $0.07–$0.17.
 
-**Q36B — Local vs SkyPilot Runtime/Cost Comparison**
+**Q36B-debug — VinDr Dataset S3 Staging + Smoke Completion**
 
-Q36B performs the actual cloud smoke launch and compares measured wall time + cost against local baseline (Q34C full: 335.6s). This is the go/no-go decision point for cloud-scaled NAS.
+Q36B PARTIAL. Live smoke executed; cloud environment validated. One blocker remains: VinDr dataset (`data/processed/vindr_binary_roi_224/`) not staged to S3. Both path and checkpoint blockers are resolved.
 
-**Q36B execution requires:** valid AWS credentials, `sky check` confirmation, explicit human approval before `sky launch`.
+**Q36B-debug requires:**
 
-```bash
-# Verify credentials
-sky check
+1. Stage VinDr dataset to S3:
+   ```bash
+   aws s3 cp data/processed/vindr_binary_roi_224/ \
+     s3://<bucket>/qstrata/vindr_binary_roi_224/ --recursive
+   ```
 
-# Dry-run first (no cost)
-sky launch infra/skypilot/q36a_single_node_smoke.yaml --dryrun
+2. Add S3 download to YAML `setup:` block:
+   ```bash
+   aws s3 sync s3://<bucket>/qstrata/vindr_binary_roi_224/ \
+     ~/sky_workdir/data/processed/vindr_binary_roi_224/
+   ```
 
-# Launch smoke (human approval required)
-sky launch infra/skypilot/q36a_single_node_smoke.yaml \
-  --cloud aws --yes --idle-minutes-to-autostop 10
+3. Re-launch smoke (`--trials 1 --epochs 1 --idle-minutes-to-autostop 10`)
 
-# Terminate after run
-sky down qstrata-q36a-cv-smoke-cpu
-```
+4. Record measured wall time vs Q34C local (335.6s for 5 trials × 2 epochs)
 
-Gate: Q36A ✓ + AWS credentials ✓ + human approval
+Gate: Q36B ✓ + S3 bucket created + VinDr dataset staged + human approval
 
 **Q33C note:** Q33C (NAS execution protocol design) was effectively realized through the Q34A implementation. The incremental 5-trial/4-epoch pilot protocol, random sampling via `random.choice`, per-trial YAML config generation, sequential Q31 runner invocation, and Pareto CSV output were all defined and validated within Q34A. No separate Q33C design document is required before Q34C proceeds.
 
@@ -297,7 +301,8 @@ Q34C-Smoke status: COMPLETE — CV pipeline validated; AUROC=0.6540; stability=v
 Q34C status: COMPLETE — 5/5 trials PASS; Pareto set: 2 trials; wall time 335.6s; best AUROC 0.6623 (trial_005, n_modes=1 depth=2 sq=1.5, 274 params); best F1 0.6463; all stability=valid; reference: reports/q34c_cv_nas_pilot_mvp.md
 Q35 status: COMPLETE — cross-frontier Pareto set: 6 trials (4 classical + 2 CV + 0 DV); DV fully dominated by CV; canonical CV: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params); canonical classical: q34a_trial_004 (AUROC 0.6835, F1 0.6398, 2250 params); unified leaderboard: experiments/leaderboards/q35_unified_frontier.csv; reference: reports/q35_unified_pareto_frontier_analysis.md
 Q36A status: COMPLETE — SkyPilot single-node smoke YAML defined; c6i.xlarge CPU; smoke < $0.03; full CV pilot $0.07–$0.17; no cloud launch; reference: infra/skypilot/q36a_single_node_smoke.yaml, reports/q36a_skypilot_single_node_backend_pilot.md
-Q36B status: NEXT — live smoke launch; local vs cloud runtime/cost comparison; requires AWS credentials + human approval
+Q36B status: PARTIAL — live smoke on c6i.xlarge; actual cost $0.022; 2 path blockers resolved; VinDr dataset staging OPEN; reference: reports/q36b_skypilot_live_runtime_cost_benchmark.md
+Q36B-debug status: NEXT — stage vindr_binary_roi_224 to S3; add aws s3 sync to setup block; re-run smoke to completion; record wall time vs Q34C local baseline (335.6s)
 Q36C status: PLANNED — full cloud CV NAS pilot (if Q36B passes)
 Phase 2 (Experiment Automation): COMPLETE
 Phase 3 (Classical NAS Ceiling): IN PROGRESS — Q32 design complete; Q34A pilot PASS (4-epoch, 5-trial; not definitive ceiling)

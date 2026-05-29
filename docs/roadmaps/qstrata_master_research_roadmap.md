@@ -187,7 +187,7 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Q38D | Docker Reproducibility Audit (CPU/GPU execution path validation) | **COMPLETE** | Q38C ✓ |
 | Q39 | Binary Augmentation Benchmark | **IN PROGRESS** (Q39C full run pending) | Q38D ✓ |
 | Q40 | Top Candidate Validation (5-seed rigorous augmentation evaluation) | **IN PROGRESS** — dry-run PASS | Q39B ✓ |
-| Q41 | Backbone / Extractor Benchmark (compact backbone comparison) | PLANNED | Q40 ✓ |
+| Q41 | DataLoader Throughput Optimization (batch_size × num_workers × pin_memory × persistent_workers sweep) | **COMPLETE** | Q40 ✓ |
 | Q42 | Partial Fine-Tuning Benchmark | PLANNED | Q41 ✓ |
 | Q43 | CV Head Re-evaluation on Improved Extractors | PLANNED | Q42 ✓ |
 | Q44 | Binary Uplift Comparative Report | PLANNED | Q43 ✓ |
@@ -196,6 +196,7 @@ These values are frozen. Future comparative work must reference them explicitly.
 **Phase 6b note (Q37):** COMPLETE — Binary uplift roadmap defined. Scientific sequencing rationale documented. Optimization dimensions and realistic target ranges established. Q38 (preprocessing benchmark) is now the immediate execution priority.  
 **Phase 6b note (Q38A):** COMPLETE — 5/5 preprocessing variants evaluated (baseline, CLAHE, histogram_equalization, contrast_normalization, clahe_plus_normalization) on q34a_trial_004 canonical compact classical model (2,250 params, frozen C006-D040 backbone). CLAHE is the only preprocessing that improves AUROC: +1.27pp (0.6835→0.6962), with −1.97pp F1 trade-off. All normalization-based methods (global HE, contrast norm, compound) degrade both AUROC and F1 substantially — mechanistically explained by distribution shift disrupting frozen backbone batch-norm calibration. CLAHE training overhead: ~104s/epoch vs ~53s/epoch baseline. CLAHE preprocessing overhead: 7.6ms/image. Recommendation: Use CLAHE for AUROC-focused runs; test augmentation in CLAHE+baseline parallel tracks in Q39. Reference: `reports/q38a_binary_preprocessing_benchmark.md`, `experiments/leaderboards/q38a_preprocessing_leaderboard.csv`.  
 **Phase 6b note (Q38D):** COMPLETE — Docker reproducibility audit complete. CPU container: Python 3.11/CPU-only torch. GPU container: Python 3.10/torch 2.2.2+cu121/CUDA 12.1/RTX 2060 SUPER. Key finding: Dockerfile.gpu pins "numpy<2" but live container has numpy 2.2.6 (ABI drift — non-blocking). Canonical execution commands, mount expectations, drift risks, and self-check script documented. Reference: `docs/process/docker_reproducibility_guide.md`, `scripts/check_qstrata_docker_env.py`, `reports/q38d_docker_reproducibility_audit.md`.  
+**Phase 6b note (Q41):** COMPLETE — DataLoader throughput benchmark run across 30-config grid (batch_size ∈ {4,8,16} × num_workers ∈ {0,2,4} × pin_memory × persistent_workers; num_workers=8 excluded). 60/60 configs stable, no OOM. Recommended profile: batch_size=8 num_workers=4 pin_memory=true persistent_workers=true prefetch_factor=2 → 371.1 samp/s, GPU avg 45.8%. Speedup over Q38A default (bs=4, nw=0): ~3.8×. GPU util ceiling ~52% (model too small to saturate RTX 2060 SUPER at these batch sizes). Total benchmark wall time: 5.1 min. Reference: `reports/q41_dataloader_throughput_optimization.md`, `experiments/leaderboards/q41_dataloader_throughput_leaderboard.csv`.
 **Phase 6b note (Q38C):** COMPLETE — 12/12 CLAHE parameter combinations evaluated (clip_limit ∈ {1.0, 2.0, 3.0, 4.0} × tile_grid_size ∈ {4, 8, 16}) on q34a_trial_004 (2,250 params, frozen C006-D040 backbone), 4 epochs, seed=45. Best AUROC: clip=3.0 tile=4×4 — AUROC=0.7239 (+4.04pp), F1=0.6779 (+3.81pp), stability=f1_moderate (positive F1 gain). Best balanced (stable label): clip=3.0 tile=8×8 — AUROC=0.7037 (+2.02pp), F1=0.6508 (+1.11pp). Sweet spot: clip=3.0 across all tile sizes yields positive AUROC and F1 deltas. clip=1.0 yields minimal/flat gains. clip=2.0 gives moderate AUROC gains with small F1 loss. clip=4.0 shows AUROC gains but less consistent F1. PP overhead: tile4×4=2.5ms, tile8×8=7.7ms, tile16×16=27–29ms. Recommendation: clip=3.0 tile=4×4 for best raw performance; clip=3.0 tile=8×8 for production-balanced setting. Total sweep wall time: 8935s (~2.5 hours). Reference: `reports/q38c_clahe_parameter_sweep.md`, `experiments/leaderboards/q38c_clahe_leaderboard.csv`.
 
 ---
@@ -262,7 +263,7 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Q38D Docker Reproducibility Audit | **COMPLETE** ✓ | Q38C ✓ |
 | Q39 Augmentation Benchmark | **IN PROGRESS** (Q39C full run pending) | Q38D ✓ |
 | Q40 Top Candidate Validation | **IN PROGRESS** — dry-run PASS | Q39B ✓ |
-| Q41 Extractor Benchmark | PLANNED | Q40 ✓ |
+| Q41 DataLoader Throughput Optimization | **COMPLETE** ✓ | Q40 ✓ |
 | Q42 Partial Fine-Tuning | PLANNED | Q41 ✓ |
 | Q43 CV Head Re-evaluation | PLANNED | Q42 ✓ |
 | Q44 Binary Uplift Report | PLANNED | Q43 ✓ |
@@ -324,7 +325,7 @@ Q38C COMPLETE — CLAHE parameter sweep complete. Best config: clip=3.0 tile=4×
 | Params | 2250 | q34a_trial_004 | frozen backbone canonical |
 
 **Phase 6b sequence:**
-Q38A (preprocessing) → Q38C (CLAHE sweep) → Q38D (Docker audit) → Q39 (augmentation) → Q40 (extractor) → Q41 (fine-tuning) → Q42 (CV head) → Q43 (report)
+Q38A (preprocessing) → Q38C (CLAHE sweep) → Q38D (Docker audit) → Q39 (augmentation) → Q40 (top candidate validation) → Q41 (DataLoader throughput) → Q42 (partial fine-tuning) → Q43 (CV head) → Q44 (report)
 
 **Parallel: Q36B-debug (cloud, lower priority):**  
 VinDr dataset S3 staging unblocks cloud NAS runs. This runs in parallel with Phase 6b but does not block Q38.  
@@ -365,7 +366,7 @@ Q38D status: COMPLETE — Docker reproducibility audit; 5 drift findings documen
 Q39B status: COMPLETE — clean Q39 branch prepared from Q38D base; Q39 script preserved (662 lines); partial aborted log preserved (2/12 variants); smoke dry-run PASS (no_augmentation + clahe_no_augmentation); reference: reports/q39b_branch_recovery.md
 Q39C status: PENDING FULL RUN — Full Q39 Augmentation Benchmark Execution (all 12 variants, 4 epochs each); script ready at scripts/run_q39_binary_augmentation_benchmark.py; estimated runtime ~186 min on GPU
 Q40 status: IN PROGRESS — top candidate validation; 3 candidates (clahe_no_augmentation, clahe_small_rotation, clahe_random_contrast); 5 seeds (42,7,123,999,2025); 4 epochs; dry-run PASS (9.8 min); full run estimated ~186 min; reference: scripts/run_q40_top_candidate_validation.py, reports/q40_top_candidate_validation.md
-Q41 status: PLANNED — backbone/extractor benchmark (compact backbone comparison)
+Q41 status: COMPLETE — DataLoader throughput benchmark; recommended: bs=8 nw=4 pm=true pw=true pf=2; 371.1 samp/s; GPU avg 45.8%; 3.8× speedup over default; reference: reports/q41_dataloader_throughput_optimization.md
 Q42 status: PLANNED — partial fine-tuning benchmark
 Q43 status: PLANNED — CV head re-evaluation on improved extractors
 Q44 status: PLANNED — binary uplift comparative report
@@ -375,7 +376,7 @@ Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C realized; Q34B
 Phase 5 (Local NAS Pilot): COMPLETE — Q34A COMPLETE; Q34B COMPLETE; Q34B-HF COMPLETE; Q34B-Parallel-Lite COMPLETE; EXP-005 COMPLETE; Q34B-full-lite COMPLETE; Q34C-Preflight COMPLETE; Q34C-Smoke COMPLETE; Q34C COMPLETE
 Phase 5b (Unified Pareto Analysis): COMPLETE — Q35 COMPLETE; 6-trial cross-frontier Pareto set; Q36 unblocked
 Phase 6 (Cloud Validation): IN PROGRESS — Q36A COMPLETE; Q36B PARTIAL; Q36B-debug NEXT (parallel to Phase 6b)
-Phase 6b (Binary Performance Uplift): IN PROGRESS — Q37 COMPLETE; Q38A COMPLETE; Q38C COMPLETE; Q38D COMPLETE; Q39B COMPLETE; Q39C PENDING FULL RUN; Q40 IN PROGRESS (dry-run PASS)
+Phase 6b (Binary Performance Uplift): IN PROGRESS — Q37 COMPLETE; Q38A COMPLETE; Q38C COMPLETE; Q38D COMPLETE; Q39B COMPLETE; Q39C PENDING FULL RUN; Q40 IN PROGRESS (dry-run PASS); Q41 COMPLETE (DataLoader throughput: 371.1 samp/s, bs=8 nw=4 pw=true pm=true pf=2)
 Phase 7 (Multiclass): BLOCKED — requires Phase 6b (Q43) complete; NOT just Phases 3–5
 CV quantum pilot ceiling: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params) — pilot exploratory; 2-epoch budget; not definitive ceiling
 DV quantum pilot ceiling: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params) — DOMINATED by CV cross-frontier; DV excluded from Phase 6b

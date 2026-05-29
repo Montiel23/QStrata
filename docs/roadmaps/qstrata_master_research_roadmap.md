@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-28  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q38D COMPLETE — Docker reproducibility audit; canonical CPU/GPU exec paths documented; Q39 NEXT (Augmentation Benchmark)
+**Status:** Q39B COMPLETE — clean Q39 branch prepared from Q38D base; smoke dry-run PASS; Q39C NEXT (Full Q39 Augmentation Benchmark Execution)
 
 ---
 
@@ -360,7 +360,8 @@ Q37 status: COMPLETE — Phase 6b binary uplift roadmap defined; scientific rati
 Q38A status: COMPLETE — 5/5 preprocessing variants; CLAHE best: AUROC=0.6962 (+1.27pp), F1=0.6201 (−1.97pp); reference: reports/q38a_binary_preprocessing_benchmark.md
 Q38C status: COMPLETE — 12/12 CLAHE combos (clip ∈ {1,2,3,4} × tile ∈ {4,8,16}); best: clip=3.0 tile=4×4 AUROC=0.7239 (+4.04pp) F1=0.6779 (+3.81pp); balanced stable: clip=3.0 tile=8×8 AUROC=0.7037 F1=0.6508; total wall=8935s; reference: reports/q38c_clahe_parameter_sweep.md, experiments/leaderboards/q38c_clahe_leaderboard.csv
 Q38D status: COMPLETE — Docker reproducibility audit; 5 drift findings documented (numpy ABI pin, requirements.txt not build source, GPU compose context, hardcoded dataset path, CPU PYTHONPATH gap); self-check script + reproducibility guide created; reference: scripts/check_qstrata_docker_env.py, docs/process/docker_reproducibility_guide.md, reports/q38d_docker_reproducibility_audit.md
-Q39 status: NEXT — binary augmentation benchmark
+Q39B status: COMPLETE — clean Q39 branch prepared from Q38D base; Q39 script preserved (662 lines); partial aborted log preserved (2/12 variants); smoke dry-run PASS (no_augmentation + clahe_no_augmentation); reference: reports/q39b_branch_recovery.md
+Q39C status: NEXT — Full Q39 Augmentation Benchmark Execution (all 12 variants, 4 epochs each)
 Q40 status: PLANNED — backbone/extractor benchmark (compact backbone comparison)
 Q41 status: PLANNED — partial fine-tuning benchmark
 Q42 status: PLANNED — CV head re-evaluation on improved extractors
@@ -371,7 +372,7 @@ Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C realized; Q34B
 Phase 5 (Local NAS Pilot): COMPLETE — Q34A COMPLETE; Q34B COMPLETE; Q34B-HF COMPLETE; Q34B-Parallel-Lite COMPLETE; EXP-005 COMPLETE; Q34B-full-lite COMPLETE; Q34C-Preflight COMPLETE; Q34C-Smoke COMPLETE; Q34C COMPLETE
 Phase 5b (Unified Pareto Analysis): COMPLETE — Q35 COMPLETE; 6-trial cross-frontier Pareto set; Q36 unblocked
 Phase 6 (Cloud Validation): IN PROGRESS — Q36A COMPLETE; Q36B PARTIAL; Q36B-debug NEXT (parallel to Phase 6b)
-Phase 6b (Binary Performance Uplift): IN PROGRESS — Q37 COMPLETE; Q38A COMPLETE; Q38C COMPLETE; Q38D COMPLETE; Q39 NEXT
+Phase 6b (Binary Performance Uplift): IN PROGRESS — Q37 COMPLETE; Q38A COMPLETE; Q38C COMPLETE; Q38D COMPLETE; Q39B COMPLETE; Q39C NEXT
 Phase 7 (Multiclass): BLOCKED — requires Phase 6b (Q43) complete; NOT just Phases 3–5
 CV quantum pilot ceiling: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params) — pilot exploratory; 2-epoch budget; not definitive ceiling
 DV quantum pilot ceiling: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params) — DOMINATED by CV cross-frontier; DV excluded from Phase 6b

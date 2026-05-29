@@ -1,0 +1,54 @@
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.2.6 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "/workspace/scripts/run_q39_binary_augmentation_benchmark.py", line 48, in <module>
+    from run_q38a_preprocessing_benchmark import (  # noqa: E402
+  File "/workspace/scripts/run_q38a_preprocessing_benchmark.py", line 50, in <module>
+    import torch
+  File "/usr/local/lib/python3.10/dist-packages/torch/__init__.py", line 1477, in <module>
+    from .functional import *  # noqa: F403
+  File "/usr/local/lib/python3.10/dist-packages/torch/functional.py", line 9, in <module>
+    import torch.nn.functional as F
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/__init__.py", line 1, in <module>
+    from .modules import *  # noqa: F403
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/__init__.py", line 35, in <module>
+    from .transformer import TransformerEncoder, TransformerDecoder, \
+  File "/usr/local/lib/python3.10/dist-packages/torch/nn/modules/transformer.py", line 20, in <module>
+    device: torch.device = torch.device(torch._C._get_default_device()),  # torch.device('cpu'),
+/usr/local/lib/python3.10/dist-packages/torch/nn/modules/transformer.py:20: UserWarning: Failed to initialize NumPy: _ARRAY_API not found (Triggered internally at ../torch/csrc/utils/tensor_numpy.cpp:84.)
+  device: torch.device = torch.device(torch._C._get_default_device()),  # torch.device('cpu'),
+[Q39] device:       cuda
+[Q39] epochs:       4
+[Q39] variants:     12/12
+[Q39] seed:         45
+[Q39] clahe:        clip=3.0 tile=4×4
+[Q39] baseline auroc: 0.68348  f1: 0.639769
+[Q39] Q38C best:      auroc: 0.723922  f1: 0.677858
+
+[Q39] ── 1/12 no_augmentation (Track A) ────────────────────────────────────────
+  [no_augmentation] epoch 1/4 train_loss=0.6647 val_auroc=0.6838 val_f1=0.5863 t=57.8s
+  [no_augmentation] epoch 2/4 train_loss=0.6531 val_auroc=0.6795 val_f1=0.5965 t=54.2s
+  [no_augmentation] epoch 3/4 train_loss=0.6445 val_auroc=0.6861 val_f1=0.6173 t=52.6s
+  [no_augmentation] epoch 4/4 train_loss=0.6432 val_auroc=0.6866 val_f1=0.6455 t=54.1s
+  [no_augmentation] TEST auroc=0.6835 f1=0.6398 acc=0.6389 latency=1.77ms pp_overhead=0.000ms aug_overhead=0.000ms wall=288.7s
+[Q39] no_augmentation done 290.0s | AUROC=0.6835 F1=0.6398 ΔAUROC=+0.0000 ΔF1=+0.0000
+
+[Q39] ── 2/12 horizontal_flip (Track A) ────────────────────────────────────────
+  [horizontal_flip] epoch 1/4 train_loss=0.6613 val_auroc=0.6874 val_f1=0.5688 t=54.4s
+  [horizontal_flip] epoch 2/4 train_loss=0.6503 val_auroc=0.6809 val_f1=0.5312 t=52.4s
+  [horizontal_flip] epoch 3/4 train_loss=0.6439 val_auroc=0.6871 val_f1=0.6314 t=52.4s
+  [horizontal_flip] epoch 4/4 train_loss=0.6438 val_auroc=0.6921 val_f1=0.6161 t=52.9s
+  [horizontal_flip] TEST auroc=0.6890 f1=0.6237 acc=0.6543 latency=1.43ms pp_overhead=0.000ms aug_overhead=0.019ms wall=278.6s
+[Q39] horizontal_flip done 279.7s | AUROC=0.6890 F1=0.6237 ΔAUROC=+0.0055 ΔF1=-0.0161
+
+[Q39] ── 3/12 small_rotation (Track A) ────────────────────────────────────────
+  [small_rotation] epoch 1/4 train_loss=0.6659 val_auroc=0.6866 val_f1=0.6276 t=60.0s
+  [small_rotation] epoch 2/4 train_loss=0.6546 val_auroc=0.6852 val_f1=0.5737 t=60.2s
+  [small_rotation] epoch 3/4 train_loss=0.6471 val_auroc=0.6840 val_f1=0.6489 t=59.9s

@@ -4,7 +4,7 @@
 **Branch:** `feature/qnn-integration`  
 **Date:** 2026-05-29  
 **Author:** Miguel Lopez (QStrata)  
-**Status:** Q40 IN PROGRESS — top candidate validation (5-seed rigorous evaluation); dry-run PASS; Q39C still pending full GPU run
+**Status:** Q42 COMPLETE — Q41 DataLoader profile applied to Q39/Q40 scripts; runtime estimates generated; Q39/Q40 full runs unblocked
 
 ---
 
@@ -188,15 +188,17 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Q39 | Binary Augmentation Benchmark | **IN PROGRESS** (Q39C full run pending) | Q38D ✓ |
 | Q40 | Top Candidate Validation (5-seed rigorous augmentation evaluation) | **IN PROGRESS** — dry-run PASS | Q39B ✓ |
 | Q41 | DataLoader Throughput Optimization (batch_size × num_workers × pin_memory × persistent_workers sweep) | **COMPLETE** | Q40 ✓ |
-| Q42 | Partial Fine-Tuning Benchmark | PLANNED | Q41 ✓ |
-| Q43 | CV Head Re-evaluation on Improved Extractors | PLANNED | Q42 ✓ |
-| Q44 | Binary Uplift Comparative Report | PLANNED | Q43 ✓ |
+| Q42 | Apply Optimised DataLoader Profile to Q39/Q40 scripts — runtime estimates before full GPU runs | **COMPLETE** | Q41 ✓ |
+| Q43 | Partial Fine-Tuning Benchmark | PLANNED | Q42 ✓ |
+| Q44 | CV Head Re-evaluation on Improved Extractors | PLANNED | Q43 ✓ |
+| Q45 | Binary Uplift Comparative Report | PLANNED | Q44 ✓ |
 
 **Phase 6b gate:** Q35 unified Pareto analysis complete ✓  
 **Phase 6b note (Q37):** COMPLETE — Binary uplift roadmap defined. Scientific sequencing rationale documented. Optimization dimensions and realistic target ranges established. Q38 (preprocessing benchmark) is now the immediate execution priority.  
 **Phase 6b note (Q38A):** COMPLETE — 5/5 preprocessing variants evaluated (baseline, CLAHE, histogram_equalization, contrast_normalization, clahe_plus_normalization) on q34a_trial_004 canonical compact classical model (2,250 params, frozen C006-D040 backbone). CLAHE is the only preprocessing that improves AUROC: +1.27pp (0.6835→0.6962), with −1.97pp F1 trade-off. All normalization-based methods (global HE, contrast norm, compound) degrade both AUROC and F1 substantially — mechanistically explained by distribution shift disrupting frozen backbone batch-norm calibration. CLAHE training overhead: ~104s/epoch vs ~53s/epoch baseline. CLAHE preprocessing overhead: 7.6ms/image. Recommendation: Use CLAHE for AUROC-focused runs; test augmentation in CLAHE+baseline parallel tracks in Q39. Reference: `reports/q38a_binary_preprocessing_benchmark.md`, `experiments/leaderboards/q38a_preprocessing_leaderboard.csv`.  
 **Phase 6b note (Q38D):** COMPLETE — Docker reproducibility audit complete. CPU container: Python 3.11/CPU-only torch. GPU container: Python 3.10/torch 2.2.2+cu121/CUDA 12.1/RTX 2060 SUPER. Key finding: Dockerfile.gpu pins "numpy<2" but live container has numpy 2.2.6 (ABI drift — non-blocking). Canonical execution commands, mount expectations, drift risks, and self-check script documented. Reference: `docs/process/docker_reproducibility_guide.md`, `scripts/check_qstrata_docker_env.py`, `reports/q38d_docker_reproducibility_audit.md`.  
 **Phase 6b note (Q41):** COMPLETE — DataLoader throughput benchmark run across 30-config grid (batch_size ∈ {4,8,16} × num_workers ∈ {0,2,4} × pin_memory × persistent_workers; num_workers=8 excluded). 60/60 configs stable, no OOM. Recommended profile: batch_size=8 num_workers=4 pin_memory=true persistent_workers=true prefetch_factor=2 → 371.1 samp/s, GPU avg 45.8%. Speedup over Q38A default (bs=4, nw=0): ~3.8×. GPU util ceiling ~52% (model too small to saturate RTX 2060 SUPER at these batch sizes). Total benchmark wall time: 5.1 min. Reference: `reports/q41_dataloader_throughput_optimization.md`, `experiments/leaderboards/q41_dataloader_throughput_leaderboard.csv`.
+**Phase 6b note (Q42):** COMPLETE — Q41 DataLoader profile (bs=8, nw=4, pm=True, pw=True, pf=2) applied to `run_q39_binary_augmentation_benchmark.py` and `run_q40_top_candidate_validation.py`. CLI overrides added: `--batch-size`, `--num-workers`, `--estimate-runtime`. Runtime estimates: Q39 full run 112 min → 30 min (3.79× speedup); Q40 full run 186 min → 49 min. Combined savings: 219 min per paired Q39+Q40 run. Dry-run smoke validations passed for both scripts. Reference: `reports/q42_optimized_dataloader_application.md`, `experiments/results/q42_runtime_estimate.json`.
 **Phase 6b note (Q38C):** COMPLETE — 12/12 CLAHE parameter combinations evaluated (clip_limit ∈ {1.0, 2.0, 3.0, 4.0} × tile_grid_size ∈ {4, 8, 16}) on q34a_trial_004 (2,250 params, frozen C006-D040 backbone), 4 epochs, seed=45. Best AUROC: clip=3.0 tile=4×4 — AUROC=0.7239 (+4.04pp), F1=0.6779 (+3.81pp), stability=f1_moderate (positive F1 gain). Best balanced (stable label): clip=3.0 tile=8×8 — AUROC=0.7037 (+2.02pp), F1=0.6508 (+1.11pp). Sweet spot: clip=3.0 across all tile sizes yields positive AUROC and F1 deltas. clip=1.0 yields minimal/flat gains. clip=2.0 gives moderate AUROC gains with small F1 loss. clip=4.0 shows AUROC gains but less consistent F1. PP overhead: tile4×4=2.5ms, tile8×8=7.7ms, tile16×16=27–29ms. Recommendation: clip=3.0 tile=4×4 for best raw performance; clip=3.0 tile=8×8 for production-balanced setting. Total sweep wall time: 8935s (~2.5 hours). Reference: `reports/q38c_clahe_parameter_sweep.md`, `experiments/leaderboards/q38c_clahe_leaderboard.csv`.
 
 ---

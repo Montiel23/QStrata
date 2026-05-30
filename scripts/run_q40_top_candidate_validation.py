@@ -16,7 +16,7 @@ Evaluation protocol:
   - Same architecture: q34a_trial_004 (2,250 params, frozen C006-D040 backbone)
   - Same preprocessing: CLAHE clip=3.0 tile=4×4
   - Same dataset split: VinDr-SpineXR binary ROI 224
-  - Same epochs/batch/lr/wd: 4 / 4 / 1e-3 / 1e-4
+  - Same epochs/batch/lr/wd: 4 / 8 / 1e-3 / 1e-4  (batch size updated Q42 → Q41 profile)
   - Metrics: AUROC, F1, Accuracy + mean, std, 95% CI (t-distribution, df=4)
 
 Scientific questions:
@@ -34,10 +34,15 @@ Reference baselines:
   Q38A raw baseline:  AUROC=0.683480  F1=0.639769
   Q38C best (CLAHE):  AUROC=0.723922  F1=0.677858  (clip=3.0, tile=4×4)
 
+DataLoader profile (Q42 — from Q41 optimisation):
+  batch_size=8  num_workers=4  pin_memory=True  persistent_workers=True  prefetch_factor=2
+  Measured throughput: 371.1 samp/s  (vs 98.0 samp/s at bs=4 nw=0 — 3.79× speedup)
+
 Usage:
   docker exec docker-qstrata-gpu-1 \\
       python3 /workspace/scripts/run_q40_top_candidate_validation.py
   python scripts/run_q40_top_candidate_validation.py --dry-run
+  python scripts/run_q40_top_candidate_validation.py --dry-run --batch-size 8 --num-workers 4 --estimate-runtime
 """
 
 from __future__ import annotations
@@ -86,6 +91,19 @@ from qcore.data.vindr_spinexr import VinDrSpineXRBinaryDataset  # noqa: E402
 
 EPOCHS = 4
 SEEDS  = [42, 7, 123, 999, 2025]
+
+# ── Q41-optimised DataLoader profile ──────────────────────────────────────────
+_OPT_BATCH_SIZE         = 8
+_OPT_NUM_WORKERS        = 4
+_OPT_PIN_MEMORY         = True
+_OPT_PERSISTENT_WORKERS = True
+_OPT_PREFETCH_FACTOR    = 2
+
+# ── Q42 runtime estimate parameters (from Q41 benchmark + Q38C reference) ────
+_OLD_THROUGHPUT_SPS     = 98.0    # bs=4 nw=0 (Q38A default)
+_NEW_THROUGHPUT_SPS     = 371.1   # bs=8 nw=4 pm pw pf=2 (Q41 recommended)
+_THROUGHPUT_SPEEDUP     = _NEW_THROUGHPUT_SPS / _OLD_THROUGHPUT_SPS  # 3.79×
+_Q38C_PER_VARIANT_S     = 744.0   # observed seconds per CLAHE variant (12 combos/8935s)
 
 Q38A_BASELINE_AUROC = 0.683480
 Q38A_BASELINE_F1    = 0.639769
@@ -193,8 +211,12 @@ def ci95(values: List[float]) -> tuple[float, float]:
 # ── Per-run trainer ────────────────────────────────────────────────────────────
 
 def run_single(spec: CandidateSpec, seed: int, device: torch.device,
-               epochs: int, dry_run_batches: Optional[int] = None) -> dict:
-    """Train q34a_trial_004 head from scratch with given seed and candidate."""
+               epochs: int, dry_run_batches: Optional[int] = None,
+               batch_size: int = _OPT_BATCH_SIZE,
+               num_workers: int = _OPT_NUM_WORKERS) -> dict:
+    """Train q34a_trial_004 head from scratch with given seed and candidate.
+    Uses Q41-optimised DataLoader profile by default (bs=8, nw=4, pm, pw, pf=2).
+    """
     set_seeds(seed)
 
     train_transform, eval_transform = make_transforms(spec)
@@ -214,9 +236,17 @@ def run_single(spec: CandidateSpec, seed: int, device: torch.device,
     val_ds   = VinDrSpineXRBinaryDataset(DATASET_ROOT, "val",   transform=eval_transform)
     test_ds  = VinDrSpineXRBinaryDataset(DATASET_ROOT, "test",  transform=eval_transform)
 
-    train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True,  num_workers=0)
-    val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
-    test_loader  = DataLoader(test_ds,  batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+    _pw = _OPT_PERSISTENT_WORKERS and num_workers > 0
+    _pf = _OPT_PREFETCH_FACTOR    if num_workers > 0 else None
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+                              num_workers=num_workers, pin_memory=_OPT_PIN_MEMORY,
+                              persistent_workers=_pw, prefetch_factor=_pf)
+    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, pin_memory=_OPT_PIN_MEMORY,
+                              persistent_workers=_pw, prefetch_factor=_pf)
+    test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, pin_memory=_OPT_PIN_MEMORY,
+                              persistent_workers=_pw, prefetch_factor=_pf)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(
@@ -519,11 +549,48 @@ def parse_args() -> argparse.Namespace:
                    help="Quick validation: 1 epoch, 30 batches per split")
     p.add_argument("--seeds", nargs="+", type=int, default=None,
                    help="Override seeds list (default: all 5)")
+    p.add_argument("--batch-size", type=int, default=_OPT_BATCH_SIZE,
+                   help=f"DataLoader batch size (default: {_OPT_BATCH_SIZE}, Q41-optimised)")
+    p.add_argument("--num-workers", type=int, default=_OPT_NUM_WORKERS,
+                   help=f"DataLoader num_workers (default: {_OPT_NUM_WORKERS}, Q41-optimised)")
+    p.add_argument("--estimate-runtime", action="store_true",
+                   help="Print Q40/Q39 full-run runtime estimates using Q41 speedup factor")
     return p.parse_args()
+
+
+def _print_runtime_estimates() -> None:
+    """Print Q40 and Q39 full-run runtime estimates using Q41 speedup factor."""
+    speedup = _THROUGHPUT_SPEEDUP
+
+    # Q40: 3 CLAHE candidates × 5 seeds × 4 epochs each
+    q40_n_runs    = len(CANDIDATES) * len(SEEDS)
+    q40_old_s     = q40_n_runs * _Q38C_PER_VARIANT_S
+    q40_new_s     = q40_old_s / speedup
+
+    # Q39: 6 raw (Track A) + 6 CLAHE (Track B) variants × 4 epochs each
+    q39_clahe_s   = 6 * _Q38C_PER_VARIANT_S
+    q39_raw_s     = 6 * _Q38C_PER_VARIANT_S * (53.0 / 104.0)  # scaled by Q38A epoch ratio
+    q39_old_s     = q39_clahe_s + q39_raw_s
+    q39_new_s     = q39_old_s / speedup
+
+    print("\n[Q42] ── Runtime Estimates (Q41 DataLoader speedup applied) ─────────", flush=True)
+    print(f"[Q42] Old profile:  bs={4}  nw={0}  pm=False  pw=False  pf=None", flush=True)
+    print(f"[Q42] New profile:  bs={_OPT_BATCH_SIZE}  nw={_OPT_NUM_WORKERS}  "
+          f"pm={_OPT_PIN_MEMORY}  pw={_OPT_PERSISTENT_WORKERS}  pf={_OPT_PREFETCH_FACTOR}", flush=True)
+    print(f"[Q42] Throughput:   old={_OLD_THROUGHPUT_SPS:.1f} samp/s  "
+          f"new={_NEW_THROUGHPUT_SPS:.1f} samp/s  speedup={speedup:.2f}×", flush=True)
+    print(f"[Q42] Q40 full run: old={q40_old_s/60:.1f} min → new={q40_new_s/60:.1f} min  "
+          f"(saves {(q40_old_s-q40_new_s)/60:.1f} min)", flush=True)
+    print(f"[Q42] Q39 full run: old={q39_old_s/60:.1f} min → new={q39_new_s/60:.1f} min  "
+          f"(saves {(q39_old_s-q39_new_s)/60:.1f} min)", flush=True)
+    print("[Q42] ─────────────────────────────────────────────────────────────────", flush=True)
 
 
 def main() -> None:
     args = parse_args()
+
+    if args.estimate_runtime:
+        _print_runtime_estimates()
 
     if torch.cuda.is_available():
         device = torch.device("cuda")
@@ -550,6 +617,9 @@ def main() -> None:
     print(f"[Q40] epochs:       {epochs}{'  (dry-run)' if args.dry_run else ''}", flush=True)
     print(f"[Q40] seeds:        {seeds_to_run}", flush=True)
     print(f"[Q40] candidates:   {[c.candidate_id for c in CANDIDATES]}", flush=True)
+    print(f"[Q40] batch_size:   {args.batch_size}  (Q41 opt: {_OPT_BATCH_SIZE})", flush=True)
+    print(f"[Q40] num_workers:  {args.num_workers}  (Q41 opt: {_OPT_NUM_WORKERS})", flush=True)
+    print(f"[Q40] pin_memory:   {_OPT_PIN_MEMORY}  persistent_workers: {_OPT_PERSISTENT_WORKERS}  prefetch_factor: {_OPT_PREFETCH_FACTOR}", flush=True)
     print(f"[Q40] clahe:        clip={CLAHE_CLIP} tile={CLAHE_TILE[0]}×{CLAHE_TILE[1]}", flush=True)
     print(f"[Q40] Q38C best:    auroc={Q38C_BEST_AUROC}  f1={Q38C_BEST_F1}", flush=True)
 
@@ -566,7 +636,9 @@ def main() -> None:
                 f"\n[Q40]  ── seed={seed} {'─'*40}",
                 flush=True,
             )
-            row = run_single(cand, seed, device, epochs, dry_run_batches)
+            row = run_single(cand, seed, device, epochs, dry_run_batches,
+                             batch_size=args.batch_size,
+                             num_workers=args.num_workers)
             per_seed_rows.append(row)
 
     total_wall = time.perf_counter() - total_start

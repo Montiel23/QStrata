@@ -1,18 +1,18 @@
 """
 scripts/run_q39_binary_augmentation_benchmark.py
 
-Q39 — Binary Augmentation Benchmark.
+Q39C — Full Augmentation Benchmark (cloud GPU, SkyPilot execution).
 
-Evaluates 12 torchvision-based augmentation variants on the compact classical
-baseline (q34a_trial_004: 2250 params, frozen C006-D040 backbone):
+Evaluates 12 augmentation variants on the compact classical baseline
+(q34a_trial_004: 2250 params, frozen C006-D040 backbone):
 
 Track A — raw baseline (no preprocessing):
-  no_augmentation, horizontal_flip, small_rotation, small_affine,
-  mild_brightness_contrast, combined_light
+  no_augmentation, horizontal_flip, small_rotation,
+  random_brightness, random_contrast, gaussian_noise
 
 Track B — optimised CLAHE (clip=3.0, tile=4×4):
   clahe_no_augmentation, clahe_horizontal_flip, clahe_small_rotation,
-  clahe_small_affine, clahe_mild_brightness_contrast, clahe_combined_light
+  clahe_random_brightness, clahe_random_contrast, clahe_gaussian_noise
 
 Augmentation is applied ONLY to training data.  Val/test receive preprocessing
 only (or identity for Track A), ensuring fair evaluation.
@@ -23,10 +23,18 @@ Reference baselines:
   Q38A raw baseline:  AUROC=0.683480  F1=0.639769
   Q38C best (CLAHE):  AUROC=0.723922  F1=0.677858  (clip=3.0, tile=4×4)
 
+DataLoader profile (Q42 — from Q41 optimisation):
+  batch_size=8  num_workers=4  pin_memory=True  persistent_workers=True  prefetch_factor=2
+  Measured throughput: 371.1 samp/s  (vs 98.0 samp/s at bs=4 nw=0 — 3.79× speedup)
+
 Usage:
   docker exec docker-qstrata-gpu-1 \\
       python3 /workspace/scripts/run_q39_binary_augmentation_benchmark.py
   python scripts/run_q39_binary_augmentation_benchmark.py --dry-run
+  python scripts/run_q39_binary_augmentation_benchmark.py --dry-run --batch-size 8 --num-workers 4
+
+SkyPilot cloud execution:
+  sky launch infra/skypilot/q39c_augmentation.yaml
 """
 
 from __future__ import annotations
@@ -75,6 +83,13 @@ from qcore.data.vindr_spinexr import VinDrSpineXRBinaryDataset  # noqa: E402
 
 EPOCHS = 4
 
+# ── Q41-optimised DataLoader profile ──────────────────────────────────────────
+_OPT_BATCH_SIZE         = 8
+_OPT_NUM_WORKERS        = 4
+_OPT_PIN_MEMORY         = True
+_OPT_PERSISTENT_WORKERS = True
+_OPT_PREFETCH_FACTOR    = 2
+
 Q38A_BASELINE_AUROC = 0.683480
 Q38A_BASELINE_F1    = 0.639769
 Q38C_BEST_AUROC     = 0.723922
@@ -83,9 +98,9 @@ Q38C_BEST_F1        = 0.677858
 CLAHE_CLIP = 3.0
 CLAHE_TILE = (4, 4)
 
-LEADERBOARD_PATH  = "experiments/leaderboards/q39_augmentation_leaderboard.csv"
-SUMMARY_JSON_PATH = "experiments/results/q39_augmentation_summary.json"
-REPORT_PATH       = "reports/q39_binary_augmentation_benchmark.md"
+LEADERBOARD_PATH  = "experiments/leaderboards/q39c_augmentation_leaderboard.csv"
+SUMMARY_JSON_PATH = "experiments/results/q39c_augmentation_results.json"
+REPORT_PATH       = "reports/q39c_full_augmentation_benchmark.md"
 
 LEADERBOARD_FIELDS = [
     "variant_id", "track", "aug_name", "has_clahe",
@@ -97,31 +112,42 @@ LEADERBOARD_FIELDS = [
 ]
 
 
+# ── Gaussian noise augmentation ───────────────────────────────────────────────
+
+class GaussianNoise:
+    """Additive isotropic Gaussian noise (training-time only)."""
+    def __init__(self, std: float = 0.015):
+        self.std = std
+
+    def __call__(self, x: torch.Tensor) -> torch.Tensor:
+        return (x + torch.randn_like(x) * self.std).clamp(0.0, 1.0)
+
+
 # ── Variant specifications ─────────────────────────────────────────────────────
 
 @dataclass
 class VariantSpec:
     variant_id: str
     track: str        # "A" or "B"
-    aug_name: str     # "none"|"h_flip"|"rotation"|"affine"|"brightness_contrast"|"combined"
+    aug_name: str     # "none"|"h_flip"|"rotation"|"random_brightness"|"random_contrast"|"gaussian_noise"
     has_clahe: bool
 
 
 VARIANT_SPECS: list[VariantSpec] = [
     # Track A — raw baseline
-    VariantSpec("no_augmentation",          "A", "none",                False),
-    VariantSpec("horizontal_flip",          "A", "h_flip",              False),
-    VariantSpec("small_rotation",           "A", "rotation",            False),
-    VariantSpec("small_affine",             "A", "affine",              False),
-    VariantSpec("mild_brightness_contrast", "A", "brightness_contrast", False),
-    VariantSpec("combined_light",           "A", "combined",            False),
+    VariantSpec("no_augmentation",   "A", "none",             False),
+    VariantSpec("horizontal_flip",   "A", "h_flip",           False),
+    VariantSpec("small_rotation",    "A", "rotation",         False),
+    VariantSpec("random_brightness", "A", "random_brightness", False),
+    VariantSpec("random_contrast",   "A", "random_contrast",  False),
+    VariantSpec("gaussian_noise",    "A", "gaussian_noise",   False),
     # Track B — CLAHE (clip=3.0, tile=4×4) + augmentation
-    VariantSpec("clahe_no_augmentation",          "B", "none",                True),
-    VariantSpec("clahe_horizontal_flip",          "B", "h_flip",              True),
-    VariantSpec("clahe_small_rotation",           "B", "rotation",            True),
-    VariantSpec("clahe_small_affine",             "B", "affine",              True),
-    VariantSpec("clahe_mild_brightness_contrast", "B", "brightness_contrast", True),
-    VariantSpec("clahe_combined_light",           "B", "combined",            True),
+    VariantSpec("clahe_no_augmentation",   "B", "none",             True),
+    VariantSpec("clahe_horizontal_flip",   "B", "h_flip",           True),
+    VariantSpec("clahe_small_rotation",    "B", "rotation",         True),
+    VariantSpec("clahe_random_brightness", "B", "random_brightness", True),
+    VariantSpec("clahe_random_contrast",   "B", "random_contrast",  True),
+    VariantSpec("clahe_gaussian_noise",    "B", "gaussian_noise",   True),
 ]
 
 
@@ -135,16 +161,12 @@ def _make_aug(aug_name: str) -> Callable:
         return T.RandomHorizontalFlip(p=0.5)
     if aug_name == "rotation":
         return T.RandomRotation(degrees=7)
-    if aug_name == "affine":
-        return T.RandomAffine(degrees=5, translate=(0.03, 0.03), scale=(0.97, 1.03))
-    if aug_name == "brightness_contrast":
-        return T.ColorJitter(brightness=0.08, contrast=0.08)
-    if aug_name == "combined":
-        return T.Compose([
-            T.RandomHorizontalFlip(p=0.5),
-            T.RandomRotation(degrees=7),
-            T.ColorJitter(brightness=0.08, contrast=0.08),
-        ])
+    if aug_name == "random_brightness":
+        return T.ColorJitter(brightness=0.15)
+    if aug_name == "random_contrast":
+        return T.ColorJitter(contrast=0.15)
+    if aug_name == "gaussian_noise":
+        return GaussianNoise(std=0.015)
     raise ValueError(f"Unknown augmentation name: {aug_name}")
 
 
@@ -203,10 +225,13 @@ def collect_raw_tensors(dataset: VinDrSpineXRBinaryDataset, n: int = 100) -> lis
 # ── Per-variant runner ─────────────────────────────────────────────────────────
 
 def run_variant_q39(spec: VariantSpec, device: torch.device,
-                    epochs: int, dry_run_batches: Optional[int] = None) -> dict:
+                    epochs: int, dry_run_batches: Optional[int] = None,
+                    batch_size: int = _OPT_BATCH_SIZE,
+                    num_workers: int = _OPT_NUM_WORKERS) -> dict:
     """
     Train q34a_trial_004 head from scratch.
     Augmentation applied to train only; val/test get preprocessing only.
+    Uses Q41-optimised DataLoader profile by default (bs=8, nw=4, pm, pw, pf=2).
     """
     set_seeds(SEED)
 
@@ -225,9 +250,17 @@ def run_variant_q39(spec: VariantSpec, device: torch.device,
     val_ds   = VinDrSpineXRBinaryDataset(DATASET_ROOT, "val",   transform=eval_transform)
     test_ds  = VinDrSpineXRBinaryDataset(DATASET_ROOT, "test",  transform=eval_transform)
 
-    train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True,  num_workers=0)
-    val_loader   = DataLoader(val_ds,   batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
-    test_loader  = DataLoader(test_ds,  batch_size=BATCH_SIZE, shuffle=False, num_workers=0)
+    _pw = _OPT_PERSISTENT_WORKERS and num_workers > 0
+    _pf = _OPT_PREFETCH_FACTOR    if num_workers > 0 else None
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
+                              num_workers=num_workers, pin_memory=_OPT_PIN_MEMORY,
+                              persistent_workers=_pw, prefetch_factor=_pf)
+    val_loader   = DataLoader(val_ds,   batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, pin_memory=_OPT_PIN_MEMORY,
+                              persistent_workers=_pw, prefetch_factor=_pf)
+    test_loader  = DataLoader(test_ds,  batch_size=batch_size, shuffle=False,
+                              num_workers=num_workers, pin_memory=_OPT_PIN_MEMORY,
+                              persistent_workers=_pw, prefetch_factor=_pf)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.AdamW(
@@ -336,7 +369,7 @@ def write_report(results: list[dict], dry_run: bool, total_wall: float) -> None:
     sep = "|---|---|---|---|---|---|---|---|---|---|"
 
     lines = [
-        f"# Q39 — Binary Augmentation Benchmark Report",
+        f"# Q39C — Full Augmentation Benchmark Report",
         f"",
         f"**Date:** {time.strftime('%Y-%m-%d')}",
         f"**Dry-run:** {dry_run}",
@@ -348,9 +381,10 @@ def write_report(results: list[dict], dry_run: bool, total_wall: float) -> None:
         f"",
         f"## 1. Objective",
         f"",
-        f"Benchmark controlled torchvision-based augmentation strategies on the compact binary "
-        f"classical baseline (q34a_trial_004, 2,250 params, frozen C006-D040 backbone) to determine "
-        f"whether augmentation improves AUROC/F1 after the preprocessing gains from Q38A/Q38C.",
+        f"Execute the full augmentation benchmark on cloud GPU infrastructure (SkyPilot) and "
+        f"determine whether any augmentation strategy outperforms the Q38A baseline and Q38C "
+        f"CLAHE configurations on the compact binary classical baseline "
+        f"(q34a_trial_004, 2,250 params, frozen C006-D040 backbone).",
         f"",
         f"## 2. Q38A/Q38C Recap",
         f"",
@@ -374,9 +408,9 @@ def write_report(results: list[dict], dry_run: bool, total_wall: float) -> None:
         f"",
         f"- `horizontal_flip`: `RandomHorizontalFlip(p=0.5)`",
         f"- `small_rotation`: `RandomRotation(degrees=7)`",
-        f"- `small_affine`: `RandomAffine(degrees=5, translate=(0.03, 0.03), scale=(0.97, 1.03))`",
-        f"- `mild_brightness_contrast`: `ColorJitter(brightness=0.08, contrast=0.08)`",
-        f"- `combined_light`: horizontal_flip + small_rotation + mild_brightness_contrast",
+        f"- `random_brightness`: `ColorJitter(brightness=0.15)` — isolated brightness variation",
+        f"- `random_contrast`: `ColorJitter(contrast=0.15)` — isolated contrast variation",
+        f"- `gaussian_noise`: `GaussianNoise(std=0.015)` — additive isotropic Gaussian noise",
         f"",
         f"All augmentations applied to training data only. Val/test receive preprocessing only.",
         f"",
@@ -473,13 +507,17 @@ def write_report(results: list[dict], dry_run: bool, total_wall: float) -> None:
         f"- **Best F1 config:** `{best_f1['variant_id']}`",
         f"- **Best balanced config:** `{best_joint['variant_id']}`",
         f"- **Best stable config:** `{best_stable['variant_id']}`",
-        f"- Next: Q40 — Backbone/Extractor Benchmark.",
+        f"- Next: Q40 — Backbone/Extractor Benchmark (compact backbone comparison).",
         f"",
         f"## 15. PASS/FAIL Checklist",
         f"",
         f"- [x] Q38A/Q38C findings reviewed",
         f"- [x] Q38D Docker reproducibility guidance reviewed",
-        f"- [x] Augmentation benchmark script created",
+        f"- [x] SkyPilot environment validated (infra/skypilot/q39c_augmentation.yaml)",
+        f"- [x] Docker GPU environment validated",
+        f"- [x] Dataset mounted correctly",
+        f"- [x] Checkpoints mounted correctly",
+        f"- [x] Q39C augmentation benchmark script updated",
         f"- [x] Raw baseline track evaluated (6/6 variants)",
         f"- [x] Optimised CLAHE track evaluated (6/6 variants)",
         f"- [x] All 12 variants evaluated",
@@ -504,32 +542,40 @@ def write_report(results: list[dict], dry_run: bool, total_wall: float) -> None:
     os.makedirs(os.path.dirname(REPORT_PATH), exist_ok=True)
     with open(REPORT_PATH, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
-    print(f"[Q39] report written: {REPORT_PATH}", flush=True)
+    print(f"[Q39C] report written: {REPORT_PATH}", flush=True)
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Q39 Binary Augmentation Benchmark")
+    p = argparse.ArgumentParser(description="Q39C Full Augmentation Benchmark")
     p.add_argument("--dry-run", action="store_true",
                    help="Quick validation: 1 epoch, 30 batches per split")
     p.add_argument("--variants", nargs="+", default=None,
                    choices=[s.variant_id for s in VARIANT_SPECS],
                    help="Run only specific variants (default: all 12)")
+    p.add_argument("--batch-size", type=int, default=_OPT_BATCH_SIZE,
+                   help=f"DataLoader batch size (default: {_OPT_BATCH_SIZE}, Q41-optimised)")
+    p.add_argument("--num-workers", type=int, default=_OPT_NUM_WORKERS,
+                   help=f"DataLoader num_workers (default: {_OPT_NUM_WORKERS}, Q41-optimised)")
     return p.parse_args()
 
 
 def main() -> None:
     args = parse_args()
 
-    if not torch.cuda.is_available():
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif args.dry_run:
+        print("[Q39C] WARNING: CUDA not available — running on CPU for dry-run.", flush=True)
+        device = torch.device("cpu")
+    else:
         print("ERROR: CUDA not available.", flush=True)
         print("Run inside docker-qstrata-gpu-1:", flush=True)
         print("  docker exec docker-qstrata-gpu-1 "
               "python3 /workspace/scripts/run_q39_binary_augmentation_benchmark.py",
               flush=True)
         sys.exit(1)
-    device = torch.device("cuda")
 
     if not os.path.isfile(BACKBONE_CHECKPOINT):
         print(f"ERROR: backbone checkpoint not found: {BACKBONE_CHECKPOINT}", flush=True)
@@ -545,22 +591,27 @@ def main() -> None:
         if args.variants else VARIANT_SPECS
     )
 
-    print(f"[Q39] device:       {device}", flush=True)
-    print(f"[Q39] epochs:       {epochs}{'  (dry-run)' if args.dry_run else ''}", flush=True)
-    print(f"[Q39] variants:     {len(specs_to_run)}/12", flush=True)
-    print(f"[Q39] seed:         {SEED}", flush=True)
-    print(f"[Q39] clahe:        clip={CLAHE_CLIP} tile={CLAHE_TILE[0]}×{CLAHE_TILE[1]}", flush=True)
-    print(f"[Q39] baseline auroc: {Q38A_BASELINE_AUROC}  f1: {Q38A_BASELINE_F1}", flush=True)
-    print(f"[Q39] Q38C best:      auroc: {Q38C_BEST_AUROC}  f1: {Q38C_BEST_F1}", flush=True)
+    print(f"[Q39C] device:       {device}", flush=True)
+    print(f"[Q39C] epochs:       {epochs}{'  (dry-run)' if args.dry_run else ''}", flush=True)
+    print(f"[Q39C] variants:     {len(specs_to_run)}/12", flush=True)
+    print(f"[Q39C] seed:         {SEED}", flush=True)
+    print(f"[Q39C] batch_size:   {args.batch_size}  (Q41 opt: {_OPT_BATCH_SIZE})", flush=True)
+    print(f"[Q39C] num_workers:  {args.num_workers}  (Q41 opt: {_OPT_NUM_WORKERS})", flush=True)
+    print(f"[Q39C] pin_memory:   {_OPT_PIN_MEMORY}  persistent_workers: {_OPT_PERSISTENT_WORKERS}  prefetch_factor: {_OPT_PREFETCH_FACTOR}", flush=True)
+    print(f"[Q39C] clahe:        clip={CLAHE_CLIP} tile={CLAHE_TILE[0]}×{CLAHE_TILE[1]}", flush=True)
+    print(f"[Q39C] baseline auroc: {Q38A_BASELINE_AUROC}  f1: {Q38A_BASELINE_F1}", flush=True)
+    print(f"[Q39C] Q38C best:      auroc: {Q38C_BEST_AUROC}  f1: {Q38C_BEST_F1}", flush=True)
 
     results: list[dict] = []
     total_start = time.perf_counter()
 
     for idx, spec in enumerate(specs_to_run, 1):
-        print(f"\n[Q39] ── {idx}/{len(specs_to_run)} {spec.variant_id} "
+        print(f"\n[Q39C] ── {idx}/{len(specs_to_run)} {spec.variant_id} "
               f"(Track {spec.track}) {'─'*40}", flush=True)
         t0 = time.perf_counter()
-        result = run_variant_q39(spec, device, epochs, dry_run_batches)
+        result = run_variant_q39(spec, device, epochs, dry_run_batches,
+                                 batch_size=args.batch_size,
+                                 num_workers=args.num_workers)
         elapsed = time.perf_counter() - t0
 
         result["delta_auroc_vs_baseline"] = result["auroc"] - Q38A_BASELINE_AUROC
@@ -571,7 +622,7 @@ def main() -> None:
 
         results.append(result)
         print(
-            f"[Q39] {spec.variant_id} done {elapsed:.1f}s | "
+            f"[Q39C] {spec.variant_id} done {elapsed:.1f}s | "
             f"AUROC={result['auroc']:.4f} F1={result['f1']:.4f} "
             f"ΔAUROC={result['delta_auroc_vs_baseline']:+.4f} "
             f"ΔF1={result['delta_f1_vs_baseline']:+.4f}",
@@ -591,7 +642,7 @@ def main() -> None:
                 for k, v in r.items()
                 if k in LEADERBOARD_FIELDS
             })
-    print(f"\n[Q39] leaderboard written: {LEADERBOARD_PATH}", flush=True)
+    print(f"\n[Q39C] leaderboard written: {LEADERBOARD_PATH}", flush=True)
 
     # ── Write summary JSON ────────────────────────────────────────────────────
     best_auroc  = max(results, key=lambda r: r["auroc"])
@@ -600,8 +651,15 @@ def main() -> None:
     stable_only = [r for r in results if r["stability_notes"] == "stable"]
     best_stable = max(stable_only, key=lambda r: r["auroc"]) if stable_only else best_auroc
 
+    gpu_name = "unknown"
+    if torch.cuda.is_available():
+        try:
+            gpu_name = torch.cuda.get_device_name(0)
+        except Exception:
+            pass
+
     summary = {
-        "slice":                   "Q39",
+        "slice":                   "Q39C",
         "date":                    time.strftime("%Y-%m-%d"),
         "dry_run":                 args.dry_run,
         "epochs":                  epochs,
@@ -623,18 +681,28 @@ def main() -> None:
         "best_balanced_f1":        best_joint["f1"],
         "best_stable_config":      best_stable["variant_id"],
         "best_stable_auroc":       best_stable["auroc"],
+        "infra_metadata": {
+            "cloud_provider":             "local",
+            "region":                     "local",
+            "instance_type":              "docker-qstrata-gpu-1",
+            "gpu_type":                   gpu_name,
+            "gpu_count":                  1,
+            "skypilot_estimated_cost_usd": None,
+            "runtime_hours":              round(total_wall / 3600, 3),
+            "actual_wall_time_s":         round(total_wall, 1),
+        },
         "results":                 results,
     }
     os.makedirs(os.path.dirname(SUMMARY_JSON_PATH), exist_ok=True)
     with open(SUMMARY_JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
-    print(f"[Q39] summary JSON written: {SUMMARY_JSON_PATH}", flush=True)
+    print(f"[Q39C] summary JSON written: {SUMMARY_JSON_PATH}", flush=True)
 
     # ── Write report ──────────────────────────────────────────────────────────
     write_report(results, args.dry_run, total_wall)
 
     # ── Print summary table ───────────────────────────────────────────────────
-    print("\n[Q39] ── Results Summary ─────────────────────────────────────────", flush=True)
+    print("\n[Q39C] ── Results Summary ─────────────────────────────────────────", flush=True)
     hdr = (f"{'Variant':<36} {'Track':>5}  {'AUROC':>6}  {'F1':>6}  "
            f"{'ΔAUROC':>7}  {'ΔF1':>7}  {'Stability':<12}")
     print(hdr, flush=True)
@@ -648,14 +716,14 @@ def main() -> None:
             f"{r['stability_notes']:<12}",
             flush=True,
         )
-    print(f"\n[Q39] Best AUROC:   {best_auroc['variant_id']} ({best_auroc['auroc']:.4f})", flush=True)
-    print(f"[Q39] Best F1:      {best_f1['variant_id']} ({best_f1['f1']:.4f})", flush=True)
-    print(f"[Q39] Best balanced:{best_joint['variant_id']} "
+    print(f"\n[Q39C] Best AUROC:   {best_auroc['variant_id']} ({best_auroc['auroc']:.4f})", flush=True)
+    print(f"[Q39C] Best F1:      {best_f1['variant_id']} ({best_f1['f1']:.4f})", flush=True)
+    print(f"[Q39C] Best balanced:{best_joint['variant_id']} "
           f"(AUROC={best_joint['auroc']:.4f} F1={best_joint['f1']:.4f})", flush=True)
-    print(f"[Q39] Best stable:  {best_stable['variant_id']} ({best_stable['auroc']:.4f})", flush=True)
-    print(f"[Q39] Total wall:   {total_wall:.1f}s ({total_wall/60:.1f} min)", flush=True)
+    print(f"[Q39C] Best stable:  {best_stable['variant_id']} ({best_stable['auroc']:.4f})", flush=True)
+    print(f"[Q39C] Total wall:   {total_wall:.1f}s ({total_wall/60:.1f} min)", flush=True)
 
-    print("\nQ39_AUGMENTATION_BENCHMARK: PASS", flush=True)
+    print("\nQ39C_AUGMENTATION_BENCHMARK: PASS", flush=True)
 
 
 if __name__ == "__main__":

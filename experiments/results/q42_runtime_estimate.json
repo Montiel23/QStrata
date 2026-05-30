@@ -1,0 +1,74 @@
+{
+  "slice": "Q42",
+  "date": "2026-05-30",
+  "objective": "Apply Q41-optimised DataLoader profile to Q39/Q40 scripts and estimate full-run runtimes",
+  "q41_source": "experiments/results/q41_dataloader_throughput_results.json",
+  "old_profile": {
+    "batch_size": 4,
+    "num_workers": 0,
+    "pin_memory": false,
+    "persistent_workers": false,
+    "prefetch_factor": null,
+    "throughput_sps": 98.0,
+    "source": "Q38A default (BATCH_SIZE=4, num_workers=0)"
+  },
+  "new_profile": {
+    "batch_size": 8,
+    "num_workers": 4,
+    "pin_memory": true,
+    "persistent_workers": true,
+    "prefetch_factor": 2,
+    "throughput_sps": 371.1,
+    "source": "Q41 recommended config (bs8_nw4_pm_pw_pf2)",
+    "gpu": "NVIDIA GeForce RTX 2060 SUPER"
+  },
+  "speedup": {
+    "throughput_factor": 3.79,
+    "note": "371.1 / 98.0 = 3.79×; Q41 commit reports 3.5× (rounded, per practical overhead)"
+  },
+  "q38c_reference": {
+    "actual_wall_time_s": 8935,
+    "variants": 12,
+    "epochs": 4,
+    "per_variant_s": 744.0,
+    "note": "Measured at old profile (bs=4, nw=0); used as scaling reference"
+  },
+  "q39_estimate": {
+    "description": "12 augmentation variants × 4 epochs (6 raw Track A + 6 CLAHE Track B)",
+    "variants_total": 12,
+    "epochs": 4,
+    "track_a_variants": 6,
+    "track_b_variants": 6,
+    "old_per_clahe_variant_s": 744.0,
+    "old_per_raw_variant_s": 378.5,
+    "old_total_s": 6729.0,
+    "old_total_min": 112.2,
+    "new_total_s": 1776.0,
+    "new_total_min": 29.6,
+    "speedup_applied": 3.79,
+    "time_saved_min": 82.6
+  },
+  "q40_estimate": {
+    "description": "3 CLAHE candidates × 5 seeds × 4 epochs each",
+    "candidates": 3,
+    "seeds": 5,
+    "epochs": 4,
+    "total_runs": 15,
+    "old_per_run_s": 744.0,
+    "old_total_s": 11160.0,
+    "old_total_min": 186.0,
+    "new_total_s": 2944.6,
+    "new_total_min": 49.1,
+    "speedup_applied": 3.79,
+    "time_saved_min": 136.9
+  },
+  "scripts_updated": [
+    "scripts/run_q39_binary_augmentation_benchmark.py",
+    "scripts/run_q40_top_candidate_validation.py"
+  ],
+  "cli_overrides_added": [
+    "--batch-size (default: 8)",
+    "--num-workers (default: 4)",
+    "--estimate-runtime (Q40 only)"
+  ]
+}

@@ -1,0 +1,2 @@
+variant_id,track,aug_name,has_clahe,auroc,f1,accuracy,params,latency_ms,wall_time_s,preprocessing_overhead_ms,augmentation_overhead_ms,delta_auroc_vs_baseline,delta_f1_vs_baseline,delta_auroc_vs_q38c_best,delta_f1_vs_q38c_best,stability_notes
+clahe_no_augmentation,B,none,True,0.596908,0.000000,0.515166,2250,2.208501,14.634080,3.133733,0.000134,-0.086572,-0.639769,-0.127014,-0.677858,f1_degraded

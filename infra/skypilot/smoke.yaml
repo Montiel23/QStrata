@@ -1,0 +1,11 @@
+resources:
+  cloud: aws
+  instance_type: t3.small
+
+workdir: .
+
+setup: |
+  echo "setup ok"
+
+run: |
+  echo "hello skypilot"

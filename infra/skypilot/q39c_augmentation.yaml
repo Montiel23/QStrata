@@ -1,0 +1,227 @@
+# infra/skypilot/q39c_augmentation.yaml
+#
+# Q39C — Full Augmentation Benchmark (Cloud GPU, SkyPilot)
+#
+# PURPOSE:
+#   Execute the full 12-variant augmentation benchmark on a single cloud GPU
+#   instance to determine whether any augmentation strategy outperforms the
+#   Q38A raw baseline (AUROC=0.6835, F1=0.6398) or Q38C CLAHE optimum
+#   (AUROC=0.7239, F1=0.6779) on the compact classical head (q34a_trial_004,
+#   2,250 params, frozen C006-D040 backbone).
+#
+# VARIANTS:
+#   Track A (raw baseline):
+#     no_augmentation, horizontal_flip, small_rotation,
+#     random_brightness, random_contrast, gaussian_noise
+#   Track B (CLAHE clip=3.0, tile=4×4):
+#     clahe_no_augmentation, clahe_horizontal_flip, clahe_small_rotation,
+#     clahe_random_brightness, clahe_random_contrast, clahe_gaussian_noise
+#
+# SCOPE CONSTRAINTS:
+#   - Single GPU instance — no distributed execution, no Ray
+#   - Sequential variant execution (12 × ~5 min ≈ 60 min total)
+#   - Docker execution inside the qstrata-gpu container
+#   - VinDr dataset must be staged to S3 before launch (blocker from Q36B)
+#
+# INSTANCE SELECTION:
+#   g4dn.xlarge: 4 vCPUs, 1× NVIDIA T4 (16 GB), $0.526/hr (us-east-1, on-demand)
+#   Disk: 100 GB — Docker image (~8 GB) + VinDr dataset (~2 GB) + results
+#
+# ESTIMATED RUNTIME:
+#   Setup:   ~10–15 min (Docker pull/build, S3 dataset sync)
+#   Benchmark: ~60–70 min (12 variants × 4 epochs × ~5 min/variant on T4)
+#   Total:   ~75–90 min → ~$0.66–$0.79 at $0.526/hr
+#
+# AUTHORIZATION:
+#   Do NOT launch without explicit human approval.
+#   Prerequisites:
+#     1. sky check  (confirm AWS credentials)
+#     2. VinDr dataset staged to S3 (unresolved blocker from Q36B)
+#
+# USAGE:
+#   # Dry-run (show instance plan, no cloud launch)
+#   sky launch infra/skypilot/q39c_augmentation.yaml --dryrun
+#
+#   # Full launch (requires approval + VinDr on S3)
+#   sky launch infra/skypilot/q39c_augmentation.yaml \
+#     --cloud aws --yes --detach-run \
+#     --idle-minutes-to-autostop 15
+#
+#   # Monitor
+#   sky logs qstrata-q39c-augmentation-gpu
+#
+#   # Download results
+#   sky rsync-down qstrata-q39c-augmentation-gpu \
+#     /workspace/experiments/leaderboards/q39c_augmentation_leaderboard.csv \
+#     experiments/leaderboards/
+#   sky rsync-down qstrata-q39c-augmentation-gpu \
+#     /workspace/experiments/results/q39c_augmentation_results.json \
+#     experiments/results/
+#   sky rsync-down qstrata-q39c-augmentation-gpu \
+#     /workspace/reports/q39c_full_augmentation_benchmark.md \
+#     reports/
+#
+#   # Shutdown (mandatory after run — prevent cost runoff)
+#   sky down qstrata-q39c-augmentation-gpu
+#
+# OPEN BLOCKER (Q36B):
+#   VinDr-SpineXR dataset has not been staged to S3. Until staged, substitute
+#   file_mounts below for local execution, or run inside docker-qstrata-gpu-1
+#   directly:
+#     docker exec docker-qstrata-gpu-1 \
+#       python3 /workspace/scripts/run_q39_binary_augmentation_benchmark.py
+#
+# Reference: reports/q39c_full_augmentation_benchmark.md
+
+name: qstrata-q39c-augmentation-gpu
+
+# ── Resources ─────────────────────────────────────────────────────────────────
+resources:
+  cloud: aws
+  instance_type: g4dn.xlarge    # 4 vCPUs, 1× NVIDIA T4 (16 GB VRAM), 16 GB RAM
+  region: us-east-1
+  use_spot: false                # On-demand for reliability
+  disk_size: 100                 # GB — Docker image + VinDr + results
+
+# ── Workdir ───────────────────────────────────────────────────────────────────
+# SkyPilot rsyncs the local working directory to ~/sky_workdir on the instance.
+# Non-gitignored files are synced automatically.
+workdir: .
+
+# ── File mounts ───────────────────────────────────────────────────────────────
+# Checkpoint: gitignored binary weights — must be mounted explicitly.
+# Dataset:    mount from S3 once staged (see Q36B open blocker).
+file_mounts:
+  ~/sky_workdir/checkpoints/c006_d040_classical_anchor.pt:
+    checkpoints/c006_d040_classical_anchor.pt
+
+  # ── VinDr dataset (uncomment once staged to S3 in Q36B-debug) ──────────
+  # /datasets/vindr-spinexr:
+  #   source: s3://qstrata-datasets/vindr-spinexr/
+  #   mode: MOUNT
+
+# ── Environment variables ─────────────────────────────────────────────────────
+envs:
+  PYTHONPATH: /home/ubuntu/sky_workdir
+  PYTHONUNBUFFERED: "1"
+  # GPU benchmark: single worker, no thread contention needed
+  OMP_NUM_THREADS: "4"
+  MKL_NUM_THREADS: "4"
+
+# ── Setup ─────────────────────────────────────────────────────────────────────
+setup: |
+  set -e
+
+  echo "[Q39C SETUP] === Step 1: Validate SkyPilot environment ==="
+  python3 --version
+  echo "[Q39C SETUP] SkyPilot workdir: ${HOME}/sky_workdir"
+  ls "${HOME}/sky_workdir/scripts/run_q39_binary_augmentation_benchmark.py" \
+    && echo "[Q39C SETUP] benchmark script: OK" \
+    || { echo "[Q39C SETUP] benchmark script: MISSING"; exit 1; }
+
+  echo "[Q39C SETUP] === Step 2: Validate Docker GPU environment ==="
+  sudo apt-get update -q
+  sudo apt-get install -y -q docker.io
+  sudo usermod -aG docker $USER
+
+  echo "[Q39C SETUP] Checking NVIDIA driver..."
+  nvidia-smi
+  echo "[Q39C SETUP] GPU environment: OK"
+
+  echo "[Q39C SETUP] === Step 3: Install Python dependencies ==="
+  pip3 install --quiet \
+    torch==2.2.2 torchvision==0.17.2 \
+    --index-url https://download.pytorch.org/whl/cu121
+
+  pip3 install --quiet \
+    "numpy<2" \
+    scikit-learn \
+    opencv-python-headless \
+    pyyaml
+
+  echo "[Q39C SETUP] Verifying torch + CUDA:"
+  python3 -c "
+  import torch
+  print(f'  torch: {torch.__version__}')
+  print(f'  cuda: {torch.cuda.is_available()}')
+  if torch.cuda.is_available():
+      print(f'  gpu: {torch.cuda.get_device_name(0)}')
+  "
+
+  echo "[Q39C SETUP] === Step 4: Validate dataset mount ==="
+  DATASET_ROOT="/datasets/vindr-spinexr"
+  if [ -d "${DATASET_ROOT}" ]; then
+    echo "[Q39C SETUP] dataset: OK (${DATASET_ROOT})"
+    ls "${DATASET_ROOT}" | head -5
+  else
+    echo "[Q39C SETUP] WARNING: ${DATASET_ROOT} not found — S3 staging required (Q36B blocker)"
+    echo "[Q39C SETUP] Falling back to local workdir dataset if available..."
+    DATASET_ROOT="${HOME}/sky_workdir/data/vindr-spinexr"
+    [ -d "${DATASET_ROOT}" ] && echo "[Q39C SETUP] local dataset: OK" \
+      || { echo "[Q39C SETUP] dataset: MISSING — cannot proceed"; exit 1; }
+  fi
+
+  echo "[Q39C SETUP] === Step 5: Validate checkpoint mount ==="
+  CKPT="${HOME}/sky_workdir/checkpoints/c006_d040_classical_anchor.pt"
+  [ -f "${CKPT}" ] \
+    && echo "[Q39C SETUP] checkpoint: OK ($(du -sh ${CKPT} | cut -f1))" \
+    || { echo "[Q39C SETUP] checkpoint: MISSING"; exit 1; }
+
+  echo "[Q39C SETUP] All pre-flight checks passed."
+
+# ── Run ───────────────────────────────────────────────────────────────────────
+run: |
+  set -e
+  WORKDIR="${HOME}/sky_workdir"
+  cd "${WORKDIR}"
+
+  LOG="/tmp/q39c_augmentation_$(date +%Y%m%d_%H%M%S).log"
+  START=$(date +%s)
+
+  echo "[Q39C RUN] === Launching full 12-variant augmentation benchmark ==="
+  echo "[Q39C RUN] Log: ${LOG}"
+  echo "[Q39C RUN] PYTHONPATH: ${PYTHONPATH}"
+
+  python3 scripts/run_q39_binary_augmentation_benchmark.py 2>&1 | tee "${LOG}"
+  EXIT_CODE=${PIPESTATUS[0]}
+
+  END=$(date +%s)
+  WALL=$((END - START))
+  echo ""
+  echo "[Q39C RUN] Wall time: ${WALL}s ($(echo "scale=1; ${WALL}/60" | bc) min)"
+  echo "[Q39C RUN] Exit code: ${EXIT_CODE}"
+
+  # Pass/fail detection
+  if grep -q "Q39C_AUGMENTATION_BENCHMARK: PASS" "${LOG}"; then
+    echo "[Q39C RUN] RESULT: PASS"
+  elif [ "${EXIT_CODE}" -eq 0 ]; then
+    echo "[Q39C RUN] RESULT: PASS (exit 0)"
+  else
+    echo "[Q39C RUN] RESULT: FAIL (exit ${EXIT_CODE})"
+    exit "${EXIT_CODE}"
+  fi
+
+  # Verify artifact creation
+  echo "[Q39C RUN] Verifying output artifacts:"
+  for f in \
+    "experiments/leaderboards/q39c_augmentation_leaderboard.csv" \
+    "experiments/results/q39c_augmentation_results.json" \
+    "reports/q39c_full_augmentation_benchmark.md"; do
+    if [ -f "${WORKDIR}/${f}" ]; then
+      echo "  ${f}: OK ($(wc -l < "${WORKDIR}/${f}") lines)"
+    else
+      echo "  ${f}: MISSING"
+    fi
+  done
+
+  # Emit infrastructure metadata for SkyPilot cost tracking
+  echo "[Q39C RUN] Infrastructure metadata:"
+  echo "  cloud_provider:  aws"
+  echo "  region:          us-east-1"
+  echo "  instance_type:   g4dn.xlarge"
+  echo "  gpu_type:        NVIDIA T4"
+  echo "  gpu_count:       1"
+  echo "  runtime_hours:   $(echo "scale=3; ${WALL}/3600" | bc)"
+  echo "  estimated_cost:  $(echo "scale=4; ${WALL}/3600 * 0.526" | bc) USD"
+
+  echo "[Q39C RUN] Benchmark complete."

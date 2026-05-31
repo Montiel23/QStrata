@@ -193,8 +193,10 @@ These values are frozen. Future comparative work must reference them explicitly.
 | Q44 | Q40 Final Statistical Report | **COMPLETE** | Q43 ✓ |
 | Q45A | Fast Augmentation Closure Benchmark (Q39C closure) | **COMPLETE** — AUGMENTATION PHASE CLOSED | Q44 ✓ |
 | Q45B | Partial Fine-Tuning Benchmark | NEXT | Q45A ✓ |
-| Q46 | CV Head Re-evaluation on Improved Extractors | PLANNED | Q45B ✓ |
-| Q47 | Binary Uplift Comparative Report | PLANNED | Q46 ✓ |
+| Q46A | Feature Extractor Benchmark Plan | **COMPLETE** (planning only) | Q45A ✓ |
+| Q46B | Feature Extractor Benchmark Execution | PLANNED | Q45B ✓ + Q46A ✓ |
+| Q46C | CV Head Re-evaluation on Q46B Winner Extractor | PLANNED | Q46B ✓ |
+| Q47 | Binary Uplift Comparative Report | PLANNED | Q46C ✓ |
 
 **Phase 6b gate:** Q35 unified Pareto analysis complete ✓  
 **Phase 6b note (Q37):** COMPLETE — Binary uplift roadmap defined. Scientific sequencing rationale documented. Optimization dimensions and realistic target ranges established. Q38 (preprocessing benchmark) is now the immediate execution priority.  
@@ -204,7 +206,8 @@ These values are frozen. Future comparative work must reference them explicitly.
 **Phase 6b note (Q42):** COMPLETE — Q41 DataLoader profile (bs=8, nw=4, pm=True, pw=True, pf=2) applied to `run_q39_binary_augmentation_benchmark.py` and `run_q40_top_candidate_validation.py`. CLI overrides added: `--batch-size`, `--num-workers`, `--estimate-runtime`. Runtime estimates: Q39 full run 112 min → 30 min (3.79× speedup); Q40 full run 186 min → 49 min. Combined savings: 219 min per paired Q39+Q40 run. Dry-run smoke validations passed for both scripts. Reference: `reports/q42_optimized_dataloader_application.md`, `experiments/results/q42_runtime_estimate.json`.
 **Phase 6b note (Q43):** COMPLETE — Full 5-seed × 3-candidate Q40 validation run with Q41-optimised DataLoader profile (bs=8, nw=4, pm=True, pw=True, pf=2). Candidates: clahe_no_augmentation (mean AUROC 0.7168, best), clahe_small_rotation (0.7134), clahe_random_contrast (0.7084). All candidates below Q38C ceiling (0.7239). Production default: clahe_no_augmentation. Wall time: 743.6s (12.4 min). Reference: `reports/q43_optimized_q40_full_validation.md`, `experiments/leaderboards/q43_optimized_q40_full_validation.csv`.  
 **Phase 6b note (Q44):** COMPLETE — Q40 final statistical report compiled from Q43 full validation results. Q40 validation cycle findings documented with multi-seed confidence intervals and comparative analysis against Q38A/Q38C baselines.  
-**Phase 6b note (Q45A):** COMPLETE — Fast augmentation closure benchmark (Q39C closure). 3 seeds × 3 candidates: clahe_no_augmentation (mean AUROC 0.7196, rank 1), clahe_horizontal_flip (0.7143), clahe_combined_aug (0.7098). No augmentation candidate exceeded Q38C ceiling (0.7239) and no candidate beat Q38C in ≥2/3 seeds. Combined with Q43 5-seed evidence: **AUGMENTATION PHASE CLOSED**. Production default confirmed: `clahe_no_augmentation`. Wall time: 14.4 min. Next: Q45B partial fine-tuning benchmark. Reference: `reports/q45a_q39c_fast_augmentation_closure.md`, `experiments/leaderboards/q45a_q39c_fast_augmentation_closure.csv`.  
+**Phase 6b note (Q45A):** COMPLETE — Fast augmentation closure benchmark (Q39C closure). 3 seeds × 3 candidates: clahe_no_augmentation (mean AUROC 0.7196, rank 1), clahe_horizontal_flip (0.7143), clahe_combined_aug (0.7098). No augmentation candidate exceeded Q38C ceiling (0.7239) and no candidate beat Q38C in ≥2/3 seeds. Combined with Q43 5-seed evidence: **AUGMENTATION PHASE CLOSED**. Production default confirmed: `clahe_no_augmentation`. Wall time: 14.4 min. Next: Q45B partial fine-tuning benchmark. Reference: `reports/q45a_q39c_fast_augmentation_closure.md`, `experiments/leaderboards/q45a_q39c_fast_augmentation_closure.csv`.
+**Phase 6b note (Q46A):** COMPLETE (planning only) — Feature extractor benchmark protocol defined. 5 candidates: C006-D040 baseline (frozen ResNet), EfficientNet-B0, MobileNetV3-Small, MobileNetV3-Large, ConvNeXt-Tiny. 3-phase evaluation: Phase 1 smoke (1 seed, 60-min cap), Phase 2 full (3 seeds [42,7,123], 120-min cap), Phase 3 extended (5 seeds, 60-min cap, triggered if winner ±0.5pp of Q38C ceiling). Decision rule: winner must have mean AUROC > Q45A baseline (0.7196); negative result if no candidate clears baseline. Runtime cap total: 240 min. Execution (Q46B) blocked on Q45B ✓. Reference: `reports/q46a_feature_extractor_benchmark_plan.md`.  
 **Phase 6b note (Q38C):** COMPLETE — 12/12 CLAHE parameter combinations evaluated (clip_limit ∈ {1.0, 2.0, 3.0, 4.0} × tile_grid_size ∈ {4, 8, 16}) on q34a_trial_004 (2,250 params, frozen C006-D040 backbone), 4 epochs, seed=45. Best AUROC: clip=3.0 tile=4×4 — AUROC=0.7239 (+4.04pp), F1=0.6779 (+3.81pp), stability=f1_moderate (positive F1 gain). Best balanced (stable label): clip=3.0 tile=8×8 — AUROC=0.7037 (+2.02pp), F1=0.6508 (+1.11pp). Sweet spot: clip=3.0 across all tile sizes yields positive AUROC and F1 deltas. clip=1.0 yields minimal/flat gains. clip=2.0 gives moderate AUROC gains with small F1 loss. clip=4.0 shows AUROC gains but less consistent F1. PP overhead: tile4×4=2.5ms, tile8×8=7.7ms, tile16×16=27–29ms. Recommendation: clip=3.0 tile=4×4 for best raw performance; clip=3.0 tile=8×8 for production-balanced setting. Total sweep wall time: 8935s (~2.5 hours). Reference: `reports/q38c_clahe_parameter_sweep.md`, `experiments/leaderboards/q38c_clahe_leaderboard.csv`.
 
 ---
@@ -277,8 +280,10 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 | Q44 Final Statistical Report | **COMPLETE** ✓ | Q43 ✓ |
 | Q45A Augmentation Closure (Q39C) | **COMPLETE** ✓ — AUGMENTATION CLOSED | Q44 ✓ |
 | Q45B Partial Fine-Tuning Benchmark | **NEXT** | Q45A ✓ |
-| Q46 CV Head Re-evaluation | PLANNED | Q45B ✓ |
-| Q47 Binary Uplift Report | PLANNED | Q46 ✓ |
+| Q46A Feature Extractor Benchmark Plan | **COMPLETE** ✓ (planning only) | Q45A ✓ |
+| Q46B Feature Extractor Benchmark Execution | PLANNED | Q45B ✓ + Q46A ✓ |
+| Q46C CV Head Re-evaluation on Q46B Winner | PLANNED | Q46B ✓ |
+| Q47 Binary Uplift Report | PLANNED | Q46C ✓ |
 
 ### Multiclass Gate
 
@@ -324,20 +329,22 @@ P21 and R-FINAL are not currently scheduled. They are not blocked by any phase g
 
 ## 5. Immediate Next Action
 
-**Q39 — Binary Augmentation Benchmark**
+**Q45B — Partial Fine-Tuning Benchmark**
 
-Q38C COMPLETE — CLAHE parameter sweep complete. Best config: clip=3.0 tile=4×4 (AUROC=0.7239, +4.04pp; F1=0.6779, +3.81pp). Production-balanced config: clip=3.0 tile=8×8 (AUROC=0.7037, +2.02pp; F1=0.6508, +1.11pp, stable). The immediate execution priority is Q39: benchmark augmentation variants against the Q38C-confirmed CLAHE preprocessing baseline.
+Q45A COMPLETE — Augmentation phase CLOSED. CLAHE-only (no augmentation) confirmed as production default (mean AUROC 0.7196, Q45A 3-seed; 0.7168, Q43 5-seed). Q46A feature extractor benchmark plan COMPLETE. The immediate execution priority is Q45B: benchmark partial fine-tuning of the pretrained backbone against the fully-frozen baseline.
 
-**Current binary ceiling (with Q38C CLAHE preprocessing):**
+**Current binary ceiling (post-augmentation closure):**
 
-| Metric | Best Q38C value | Config | Source |
+| Metric | Value | Config | Source |
 |---|---|---|---|
-| AUROC | 0.7239 | clip=3.0 tile=4×4 | `experiments/leaderboards/q38c_clahe_leaderboard.csv` |
-| F1 | 0.6779 | clip=3.0 tile=4×4 | same |
-| Params | 2250 | q34a_trial_004 | frozen backbone canonical |
+| AUROC (single-seed best) | 0.7239 | CLAHE clip=3.0 tile=4×4, frozen, no aug | Q38C |
+| AUROC (3-seed mean) | 0.7196 ± 0.0095 | CLAHE-only | Q45A |
+| AUROC (5-seed mean) | 0.7168 ± 0.0096 | CLAHE-only | Q43 |
+| F1 (single-seed best) | 0.6779 | Q38C config | Q38C |
+| Params (head) | 2250 | q34a_trial_004 | frozen backbone canonical |
 
-**Phase 6b sequence:**
-Q38A (preprocessing) → Q38C (CLAHE sweep) → Q38D (Docker audit) → Q39 (augmentation) → Q40 (top candidate validation) → Q41 (DataLoader throughput) → Q42 (partial fine-tuning) → Q43 (CV head) → Q44 (report)
+**Phase 6b sequence (current state):**
+Q38A ✓ → Q38C ✓ → Q38D ✓ → Q39/Q45A ✓ (CLOSED) → Q43/Q44 ✓ → **Q45B (NEXT)** → Q46B (extractor benchmark; plan Q46A ✓) → Q46C (CV head) → Q47 (report)
 
 **Parallel: Q36B-debug (cloud, lower priority):**  
 VinDr dataset S3 staging unblocks cloud NAS runs. This runs in parallel with Phase 6b but does not block Q38.  
@@ -388,7 +395,7 @@ Phase 4 (Quantum NAS): IN PROGRESS — Q33A + Q33B complete; Q33C realized; Q34B
 Phase 5 (Local NAS Pilot): COMPLETE — Q34A COMPLETE; Q34B COMPLETE; Q34B-HF COMPLETE; Q34B-Parallel-Lite COMPLETE; EXP-005 COMPLETE; Q34B-full-lite COMPLETE; Q34C-Preflight COMPLETE; Q34C-Smoke COMPLETE; Q34C COMPLETE
 Phase 5b (Unified Pareto Analysis): COMPLETE — Q35 COMPLETE; 6-trial cross-frontier Pareto set; Q36 unblocked
 Phase 6 (Cloud Validation): IN PROGRESS — Q36A COMPLETE; Q36B PARTIAL; Q36B-debug NEXT (parallel to Phase 6b)
-Phase 6b (Binary Performance Uplift): IN PROGRESS — Q37 COMPLETE; Q38A COMPLETE; Q38C COMPLETE; Q38D COMPLETE; Q39B COMPLETE; Q39C PENDING FULL RUN; Q40 IN PROGRESS (dry-run PASS); Q41 COMPLETE (DataLoader throughput: 371.1 samp/s, bs=8 nw=4 pw=true pm=true pf=2)
+Phase 6b (Binary Performance Uplift): IN PROGRESS — Q37 COMPLETE; Q38A COMPLETE; Q38C COMPLETE; Q38D COMPLETE; Q39/Q45A COMPLETE (AUGMENTATION CLOSED); Q40/Q43/Q44 COMPLETE; Q41 COMPLETE; Q42 COMPLETE; Q45A COMPLETE; Q46A COMPLETE (planning only; execution Q46B blocked on Q45B); Q45B NEXT
 Phase 7 (Multiclass): BLOCKED — requires Phase 6b (Q43) complete; NOT just Phases 3–5
 CV quantum pilot ceiling: q34c_trial_005 (AUROC 0.6623, F1 0.6463, 274 params) — pilot exploratory; 2-epoch budget; not definitive ceiling
 DV quantum pilot ceiling: q34b_trial_004 (AUROC 0.6551, F1 0.6289, 598 params) — DOMINATED by CV cross-frontier; DV excluded from Phase 6b

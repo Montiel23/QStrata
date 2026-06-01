@@ -1,0 +1,109 @@
+# Q46 Feature Extractor Benchmark Configuration
+# Q46A protocol — backbone replacement study
+
+slice_id: Q46-FEATURE-EXTRACTOR-BENCHMARK
+
+# ── Training hyperparameters (fixed from Q38A–Q45A) ───────────────────────────
+training:
+  epochs: 4
+  learning_rate: 1.0e-3
+  weight_decay: 1.0e-4
+  loss: BCEWithLogitsLoss
+  optimizer: Adam
+
+# ── DataLoader profile (Q41-optimised) ────────────────────────────────────────
+dataloader:
+  batch_size: 8
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+  prefetch_factor: 2
+
+# ── Preprocessing (Q38C champion) ─────────────────────────────────────────────
+preprocessing:
+  clahe_clip: 3.0
+  clahe_tile: [4, 4]
+  image_size: 224
+
+# ── Seeds ─────────────────────────────────────────────────────────────────────
+seeds:
+  smoke: [42]
+  full: [42, 7, 123]
+  extended: [42, 7, 123, 999, 2025]
+
+# ── Runtime caps (minutes) ────────────────────────────────────────────────────
+runtime_caps:
+  smoke_minutes: 60
+  full_minutes: 120
+  extended_minutes: 60
+
+# ── Reference baselines ───────────────────────────────────────────────────────
+baselines:
+  q38c_auroc: 0.723922
+  q38c_f1: 0.677858
+  q45a_mean_auroc: 0.7196
+  q45a_mean_f1: 0.6360
+
+# ── Decision rule ─────────────────────────────────────────────────────────────
+decision_rule:
+  threshold_auroc: 0.7196     # Q45A mean AUROC — must exceed for WINNER verdict
+  min_seeds_beat: 2           # candidate must beat baseline in ≥2/3 seeds
+  extended_trigger_delta: 0.005  # within 0.005 AUROC of ceiling → extended run
+
+# ── Candidates ────────────────────────────────────────────────────────────────
+candidates:
+  - id: baseline
+    backbone: c006_d040_frozen_resnet
+    checkpoint: checkpoints/c006_d040_classical_anchor.pt
+    feature_dim: 512
+    requires_projection: false
+    approx_params: 11_000_000
+
+  - id: efficientnet_b0
+    backbone: efficientnet_b0
+    source: torchvision
+    weights: IMAGENET1K_V1
+    feature_dim: 1280
+    requires_projection: true
+    approx_params: 5_288_548
+
+  - id: mobilenetv3_small
+    backbone: mobilenet_v3_small
+    source: torchvision
+    weights: IMAGENET1K_V1
+    feature_dim: 576
+    requires_projection: true
+    approx_params: 2_542_856
+
+  - id: mobilenetv3_large
+    backbone: mobilenet_v3_large
+    source: torchvision
+    weights: IMAGENET1K_V1
+    feature_dim: 960
+    requires_projection: true
+    approx_params: 5_483_032
+
+  - id: convnext_tiny
+    backbone: convnext_tiny
+    source: torchvision
+    weights: IMAGENET1K_V1
+    feature_dim: 768
+    requires_projection: true
+    approx_params: 28_589_128
+
+# ── Dataset ───────────────────────────────────────────────────────────────────
+dataset:
+  name: vindr_binary_roi_224
+  root: data/processed/vindr_binary_roi_224
+
+# ── Head configuration ────────────────────────────────────────────────────────
+head:
+  config: configs/experiments/q34a_classical_nas/q34a_trial_004.yaml
+  expected_params: 2250
+
+# ── Output paths ──────────────────────────────────────────────────────────────
+outputs:
+  smoke_leaderboard: experiments/leaderboards/q46b_extractor_smoke_leaderboard.csv
+  full_leaderboard:  experiments/leaderboards/q46b_extractor_full_leaderboard.csv
+  results_json:      experiments/results/q46b_feature_extractor_benchmark.json
+  report:            reports/q46b_feature_extractor_benchmark.md

@@ -329,12 +329,12 @@ def build_backbone_extractor(candidate: CandidateSpec, project_root: str):
     if candidate.candidate_id == "baseline":
         # Load the existing C006-D040 frozen ResNet from checkpoint
         sys.path.insert(0, os.path.join(project_root, "scripts"))
-        from run_q38a_preprocessing_benchmark import load_backbone
+        from run_q38a_preprocessing_benchmark import load_backbone, BACKBONE_OUT_DIM as _BB_DIM
         ck = os.path.join(project_root, BACKBONE_CHECKPOINT)
         backbone = load_backbone(ck)
         for p in backbone.parameters():
             p.requires_grad = False
-        return backbone, candidate.feature_dim
+        return backbone, _BB_DIM  # C006-D040 outputs 128-dim, not 512
 
     from torchvision import models
 
@@ -606,7 +606,7 @@ def main():
         sys.path.insert(0, os.path.join(project_root, "scripts"))
         from run_q38a_preprocessing_benchmark import (
             _clahe_torch, build_nas_head, eval_split, set_seeds,
-            HEAD_CONFIG, EXPECTED_PARAMS,
+            HEAD_CONFIG, EXPECTED_PARAMS, BACKBONE_OUT_DIM,
         )
         from qcore.data.vindr_spinexr import VinDrSpineXRBinaryDataset
     except ImportError as e:
@@ -636,10 +636,9 @@ def main():
                 print(f"    ERROR building backbone: {e}")
                 continue
 
-            # Optional projection to match head input dimension
-            head_in_dim = HEAD_CONFIG.get("input_dim", feat_dim)
-            if feat_dim != head_in_dim:
-                projection = nn.Linear(feat_dim, head_in_dim)
+            # Project to BACKBONE_OUT_DIM (128) — build_nas_head has this hardcoded as input
+            if feat_dim != BACKBONE_OUT_DIM:
+                projection = nn.Linear(feat_dim, BACKBONE_OUT_DIM)
             else:
                 projection = nn.Identity()
 
@@ -649,13 +648,16 @@ def main():
             device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             model = model.to(device)
 
-            # DataLoader (Q41-optimised profile)
-            transform = T.Compose([
-                T.Resize((224, 224)),
-                T.ToTensor(),
-                T.Lambda(lambda x: _clahe_torch(x, CLAHE_CLIP, CLAHE_TILE)),
-                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            ])
+            # Dataset returns float32 tensors [1, 224, 224] — no T.ToTensor needed.
+            # Torchvision backbones require 3-channel input with ImageNet normalisation.
+            if candidate.candidate_id == "baseline":
+                transform = T.Lambda(lambda x: _clahe_torch(x, CLAHE_CLIP, CLAHE_TILE))
+            else:
+                transform = T.Compose([
+                    T.Lambda(lambda x: _clahe_torch(x, CLAHE_CLIP, CLAHE_TILE)),
+                    T.Lambda(lambda x: x.repeat(3, 1, 1)),
+                    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                ])
             ds_root = os.path.join(project_root, DATASET_ROOT)
             train_ds = VinDrSpineXRBinaryDataset(root=ds_root, split="train", transform=transform)
             val_ds   = VinDrSpineXRBinaryDataset(root=ds_root, split="val",   transform=transform)
@@ -677,7 +679,7 @@ def main():
                 shuffle=False,
             )
 
-            criterion = nn.BCEWithLogitsLoss()
+            criterion = nn.CrossEntropyLoss()
             # Only head parameters are trained; backbone is frozen
             trainable = [p for p in model.parameters() if p.requires_grad]
             optimizer = optim.Adam(trainable, lr=LR, weight_decay=WEIGHT_DECAY)
@@ -685,10 +687,11 @@ def main():
             epoch_start = time.time()
             for epoch in range(EPOCHS):
                 model.train()
+                backbone.eval()  # Keep backbone BN running stats fixed while frozen
                 for imgs, labels in train_loader:
-                    imgs, labels = imgs.to(device), labels.float().to(device)
+                    imgs, labels = imgs.to(device), labels.long().to(device)
                     optimizer.zero_grad()
-                    loss = criterion(model(imgs).squeeze(1), labels)
+                    loss = criterion(model(imgs), labels)
                     loss.backward()
                     optimizer.step()
 
@@ -698,7 +701,7 @@ def main():
                         break
 
             wall_time_s = time.time() - epoch_start
-            metrics = eval_split(model, val_loader, device)
+            metrics = eval_split(model, val_loader, criterion, device)
             auroc    = metrics.get("auroc", 0.0)
             f1       = metrics.get("f1", 0.0)
             accuracy = metrics.get("accuracy", 0.0)

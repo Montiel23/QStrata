@@ -1,0 +1,58 @@
+======================================================================
+Q46 Feature Extractor Benchmark — Phase: FULL
+======================================================================
+  Seeds:      [42, 7, 123]
+  Candidates: ['baseline', 'efficientnet_b0', 'mobilenetv3_small', 'mobilenetv3_large', 'convnext_tiny']
+  Epochs:     4
+  Cap:        120 min
+  Output:     /workspace/experiments/leaderboards/q46b_extractor_full_leaderboard.csv
+
+
+  → baseline  seed=42
+    AUROC=0.7439  F1=0.6708  Δvs_q45a=+0.0243  wall=37.5s
+
+  → baseline  seed=7
+    AUROC=0.7330  F1=0.5893  Δvs_q45a=+0.0134  wall=35.3s
+
+  → baseline  seed=123
+    AUROC=0.7024  F1=0.5596  Δvs_q45a=-0.0172  wall=35.2s
+
+  → efficientnet_b0  seed=42
+    AUROC=0.9799  F1=0.9285  Δvs_q45a=+0.2603  wall=36.0s
+
+  → efficientnet_b0  seed=7
+    AUROC=0.9868  F1=0.9420  Δvs_q45a=+0.2672  wall=36.2s
+
+  → efficientnet_b0  seed=123
+    AUROC=0.9829  F1=0.9322  Δvs_q45a=+0.2633  wall=35.2s
+
+  → mobilenetv3_small  seed=42
+    AUROC=0.9843  F1=0.9223  Δvs_q45a=+0.2647  wall=34.9s
+
+  → mobilenetv3_small  seed=7
+    AUROC=0.9829  F1=0.8936  Δvs_q45a=+0.2633  wall=34.5s
+
+  → mobilenetv3_small  seed=123
+    AUROC=0.9793  F1=0.9076  Δvs_q45a=+0.2597  wall=35.0s
+
+  → mobilenetv3_large  seed=42
+    AUROC=0.9871  F1=0.9442  Δvs_q45a=+0.2675  wall=35.6s
+
+  → mobilenetv3_large  seed=7
+    AUROC=0.9870  F1=0.9521  Δvs_q45a=+0.2674  wall=35.2s
+
+  → mobilenetv3_large  seed=123
+    AUROC=0.9879  F1=0.9030  Δvs_q45a=+0.2683  wall=35.5s
+
+  → convnext_tiny  seed=42
+    AUROC=0.9856  F1=0.9338  Δvs_q45a=+0.2660  wall=68.2s
+
+  → convnext_tiny  seed=7
+    AUROC=0.9872  F1=0.9320  Δvs_q45a=+0.2676  wall=68.5s
+
+  → convnext_tiny  seed=123
+    AUROC=0.9867  F1=0.9370  Δvs_q45a=+0.2671  wall=68.6s
+
+  Leaderboard written: /workspace/experiments/leaderboards/q46b_extractor_full_leaderboard.csv
+
+  Done.

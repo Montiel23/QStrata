@@ -1,0 +1,4 @@
+rank,dataset,seed,auroc,f1,accuracy,params_backbone,params_projection,params_head,params_total,runtime_s,delta_auroc_vs_q46winner
+1,vindr_spinexr,42,0.975043,0.921942,0.92427,5483032,123008,2250,5608290,0.64,-0.012301
+2,vindr_spinexr,7,0.972685,0.91247,0.91294,5483032,123008,2250,5608290,0.52,-0.014659
+3,vindr_spinexr,123,0.971455,0.911471,0.915325,5483032,123008,2250,5608290,0.56,-0.015889

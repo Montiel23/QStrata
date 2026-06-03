@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="500" viewBox="0 0 880 500">
+<defs><style>text{font-family:"DejaVu Sans",Arial,sans-serif;}</style></defs>
+<rect x="0" y="0" width="880" height="500" fill="#f7f8fa"/>
+<text x="440" y="38" text-anchor="middle" fill="#222" font-size="17" font-weight="bold">Class Distribution - VinDr-SpineXR Binary</text>
+<text x="440" y="57" text-anchor="middle" fill="#666" font-size="12">Train / Val / Test splits | stratified sampling</text>
+<line x1="75" y1="70" x2="75" y2="415" stroke="#aaa" stroke-width="1.5"/>
+<line x1="75" y1="415" x2="850" y2="415" stroke="#aaa" stroke-width="1.5"/>
+<line x1="75" y1="364.4" x2="850" y2="364.4" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="69" y="368.4" text-anchor="end" fill="#777" font-size="11">500</text>
+<line x1="75" y1="313.8" x2="850" y2="313.8" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="69" y="317.8" text-anchor="end" fill="#777" font-size="11">1,000</text>
+<line x1="75" y1="263.2" x2="850" y2="263.2" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="69" y="267.2" text-anchor="end" fill="#777" font-size="11">1,500</text>
+<line x1="75" y1="212.5" x2="850" y2="212.5" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="69" y="216.5" text-anchor="end" fill="#777" font-size="11">2,000</text>
+<line x1="75" y1="161.9" x2="850" y2="161.9" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="69" y="165.9" text-anchor="end" fill="#777" font-size="11">2,500</text>
+<line x1="75" y1="111.3" x2="850" y2="111.3" stroke="#ddd" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="69" y="115.3" text-anchor="end" fill="#777" font-size="11">3,000</text>
+<text x="69" y="419" text-anchor="end" fill="#777" font-size="11">0</text>
+<rect x="111.2" y="70.0" width="85.2" height="345.0" fill="#3a7bd5" rx="3" opacity="0.88"/>
+<text x="153.8" y="54.0" text-anchor="middle" fill="#555" font-size="9">50.8%</text>
+<text x="153.8" y="66.0" text-anchor="middle" fill="#3a7bd5" font-size="10" font-weight="bold">3,408</text>
+<rect x="211.9" y="80.5" width="85.2" height="334.5" fill="#e05555" rx="3" opacity="0.88"/>
+<text x="254.5" y="64.5" text-anchor="middle" fill="#555" font-size="9">49.2%</text>
+<text x="254.5" y="76.5" text-anchor="middle" fill="#e05555" font-size="10" font-weight="bold">3,304</text>
+<text x="204.2" y="433" text-anchor="middle" fill="#333" font-size="13" font-weight="bold">Train</text>
+<text x="204.2" y="448" text-anchor="middle" fill="#666" font-size="11">N=6,712</text>
+<rect x="369.5" y="328.8" width="85.2" height="86.2" fill="#3a7bd5" rx="3" opacity="0.88"/>
+<text x="412.1" y="312.8" text-anchor="middle" fill="#555" font-size="9">50.8%</text>
+<text x="412.1" y="324.8" text-anchor="middle" fill="#3a7bd5" font-size="10" font-weight="bold">852</text>
+<rect x="470.2" y="331.5" width="85.2" height="83.5" fill="#e05555" rx="3" opacity="0.88"/>
+<text x="512.9" y="315.5" text-anchor="middle" fill="#555" font-size="9">49.2%</text>
+<text x="512.9" y="327.5" text-anchor="middle" fill="#e05555" font-size="10" font-weight="bold">825</text>
+<text x="462.5" y="433" text-anchor="middle" fill="#333" font-size="13" font-weight="bold">Val</text>
+<text x="462.5" y="448" text-anchor="middle" fill="#666" font-size="11">N=1,677</text>
+<rect x="627.8" y="306.7" width="85.2" height="108.3" fill="#3a7bd5" rx="3" opacity="0.88"/>
+<text x="670.5" y="290.7" text-anchor="middle" fill="#555" font-size="9">51.5%</text>
+<text x="670.5" y="302.7" text-anchor="middle" fill="#3a7bd5" font-size="10" font-weight="bold">1,070</text>
+<rect x="728.6" y="313.1" width="85.2" height="101.9" fill="#e05555" rx="3" opacity="0.88"/>
+<text x="771.2" y="297.1" text-anchor="middle" fill="#555" font-size="9">48.5%</text>
+<text x="771.2" y="309.1" text-anchor="middle" fill="#e05555" font-size="10" font-weight="bold">1,007</text>
+<text x="720.8" y="433" text-anchor="middle" fill="#333" font-size="13" font-weight="bold">Test</text>
+<text x="720.8" y="448" text-anchor="middle" fill="#666" font-size="11">N=2,077</text>
+<text x="16" y="242" text-anchor="middle" fill="#444" font-size="12" transform="rotate(-90,16,242)">Sample Count</text>
+<rect x="280" y="467" width="12" height="12" fill="#3a7bd5" rx="2"/>
+<text x="296" y="478" text-anchor="start" fill="#444" font-size="12">No Finding (Class 0)</text>
+<rect x="480" y="467" width="12" height="12" fill="#e05555" rx="2"/>
+<text x="496" y="478" text-anchor="start" fill="#444" font-size="12">Any Pathology (Class 1)</text>
+</svg>

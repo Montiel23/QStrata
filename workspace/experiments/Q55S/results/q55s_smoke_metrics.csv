@@ -1,0 +1,4 @@
+model,accuracy,f1,precision,recall,auroc,auroc_available,train_loss,n_trainable_params,runtime_s,n_samples
+classical_cnn_head,0.5,0.0,0.0,0.0,0.6171875,True,0.779411,4194,1.08,32
+custom_dv_qnn,0.5,0.0,0.0,0.0,0.62890625,True,0.733827,574,0.8,32
+custom_cv_qnn,0.59375,0.43478260869565216,0.7142857142857143,0.3125,0.546875,True,0.867317,532,0.16,32

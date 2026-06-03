@@ -1,0 +1,4 @@
+rank,dataset,seed,auroc,f1,accuracy,n_qubits,circuit_depth,alpha,params_backbone,params_projection,params_qnn_head,params_total,runtime_s,delta_auroc_vs_q46winner,delta_auroc_vs_q56baseline
+1,vindr_spinexr,123,0.884905,0.795567,0.802027,4,1,0.1,5483032,123008,574,5606614,265.1,-0.102439,-0.088156
+2,vindr_spinexr,7,0.88443,0.792265,0.801431,4,1,0.1,5483032,123008,574,5606614,261.67,-0.102914,-0.088631
+3,vindr_spinexr,42,0.883308,0.778506,0.79845,4,1,0.1,5483032,123008,574,5606614,263.84,-0.104036,-0.089753

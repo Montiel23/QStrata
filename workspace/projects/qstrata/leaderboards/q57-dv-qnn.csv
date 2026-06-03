@@ -1,0 +1,3 @@
+rank,dataset,row_type,mean_auroc,std_auroc,ci95_lo_auroc,ci95_hi_auroc,mean_f1,std_f1,ci95_lo_f1,ci95_hi_f1,mean_accuracy,n_qubits,circuit_depth,params_total,decision
+1,buu_lspine,summary,1.0,0.0,1.0,1.0,0.989778,0.013588,0.956022,1.023534,0.99,4,1,5606614,WINNER
+2,vindr_spinexr,summary,0.884214,0.00082,0.882177,0.886252,0.788779,0.009049,0.766299,0.81126,0.800636,4,1,5606614,WINNER

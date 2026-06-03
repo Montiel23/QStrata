@@ -1,0 +1,4 @@
+rank,dataset,seed,auroc,f1,accuracy,n_modes,circuit_depth,squeezing_cap,params_backbone,params_projection,params_cv_head,params_total,runtime_s,delta_auroc_vs_q46winner,delta_auroc_vs_q56baseline,delta_auroc_vs_q57dvqnn
+1,buu_lspine,42,1.0,1.0,1.0,2,1,1.5,5483032,123008,532,5606572,8.61,0.012656,0.0,0.0
+2,buu_lspine,7,1.0,1.0,1.0,2,1,1.5,5483032,123008,532,5606572,8.79,0.012656,0.0,0.0
+3,buu_lspine,123,1.0,1.0,1.0,2,1,1.5,5483032,123008,532,5606572,8.07,0.012656,0.0,0.0

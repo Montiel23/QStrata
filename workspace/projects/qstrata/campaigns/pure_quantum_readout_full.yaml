@@ -1,0 +1,152 @@
+campaign_id: pure_quantum_readout_full
+campaign_version: "1.0"
+created_date: "2026-06-04"
+created_by: Claude Code (Sonnet 4.6) — Q66P slice
+project: qstrata
+description: >
+  Full benchmark campaign for the pure quantum readout study.
+  Runs only after Q74S (smoke gate) emits READY_FOR_FULL_PURE_QUANTUM_READOUT_CAMPAIGN.
+  Covers full 3-seed benchmarks of pure DV-QNN and CV-QNN readout variants,
+  quantum metrics extraction, noise/detector ablation, unified comparison, and final report.
+
+scientific_context:
+  parent_campaign: pure_quantum_readout_smoke
+  gate_condition: >
+    pure_quantum_readout_smoke campaign must complete and Q74S must emit
+    READY_FOR_FULL_PURE_QUANTUM_READOUT_CAMPAIGN before any slice in this
+    campaign becomes READY.
+  research_questions:
+    - Can quantum measurement outcomes (Born-rule probs / homodyne) classify without a classical final layer?
+    - How much AUROC delta exists between hybrid readout and pure quantum readout?
+    - What quantum circuit properties (state separation, homodyne SNR) predict classification performance?
+    - Is CV-QNN superior to DV-QNN for pure readout on VinDr-SpineXR?
+    - How robust is pure quantum readout to realistic noise?
+  framework_constraint: "Custom in-house qcore only — no PennyLane, Qiskit, Strawberry Fields, TorchQuantum"
+
+full_constraints:
+  seeds: [42, 7, 123]
+  vindr_test_evaluation_required: true
+  save_y_true_y_score_y_pred: true
+  required_metrics: [auroc, auprc, accuracy, precision, recall, f1, confusion_matrix, sensitivity, specificity, ppv, npv]
+  generate_svg_figures: true
+  generate_latex_tables: true
+  generate_final_report: true
+  no_external_quantum_frameworks: true
+  no_push: true
+  binary_classification_only: true
+  buu_synthetic_disclosure_required: true
+
+slices:
+  - Q69
+  - Q70
+  - Q71
+  - Q72
+  - Q73
+  - Q74
+  - Q75
+
+dependencies:
+  Q69: [Q74S]
+  Q70: [Q74S]
+  Q71: [Q74S]
+  Q72: [Q69, Q70, Q71]
+  Q73: [Q72]
+  Q74: [Q73]
+  Q75: [Q74]
+
+slice_specs:
+  Q69:
+    name: DV-QNN Pure Readout Full Benchmark
+    input_spec: workspace/projects/qstrata/inputs/q69_dv_qnn_pure_readout_full_benchmark.md
+    estimated_runtime: HIGH
+    type: benchmark
+    description: Full 3-seed benchmark of best-performing DV-QNN pure Born-rule readout variant.
+
+  Q70:
+    name: CV-QNN Single Homodyne Readout Full Benchmark
+    input_spec: workspace/projects/qstrata/inputs/q70_cv_qnn_homodyne_readout_full_benchmark.md
+    estimated_runtime: HIGH
+    type: benchmark
+    description: Full 3-seed benchmark of CV-QNN single homodyne readout.
+
+  Q71:
+    name: CV-QNN Dual Homodyne Readout Full Benchmark
+    input_spec: workspace/projects/qstrata/inputs/q71_cv_qnn_dual_homodyne_readout_full_benchmark.md
+    estimated_runtime: HIGH
+    type: benchmark
+    description: Full 3-seed benchmark of CV-QNN dual homodyne centroid readout.
+
+  Q72:
+    name: Quantum Metrics Extraction
+    input_spec: workspace/projects/qstrata/inputs/q72_quantum_metrics_extraction.md
+    estimated_runtime: MEDIUM
+    type: analysis
+    description: Inference-only metrics extraction from Q62A checkpoints and Q69/Q70/Q71 models.
+
+  Q73:
+    name: Noise Detector Circuit Ablation
+    input_spec: workspace/projects/qstrata/inputs/q73_noise_detector_circuit_ablation.md
+    estimated_runtime: HIGH
+    type: ablation
+    description: >
+      Sweep noise and detector parameters at inference-time (no re-training except squeezing cap).
+
+  Q74:
+    name: Hybrid vs Pure Quantum Comparison
+    input_spec: workspace/projects/qstrata/inputs/q74_hybrid_vs_pure_quantum_comparison.md
+    estimated_runtime: LOW
+    type: analysis
+    description: >
+      Aggregate all 6 model variants; generate comparison figures and LaTeX table.
+
+  Q75:
+    name: Pure Quantum Readout Final Report
+    input_spec: workspace/projects/qstrata/inputs/q75_pure_quantum_readout_final_report.md
+    estimated_runtime: LOW
+    type: report
+    description: >
+      Synthesize Q66-Q74 results into publication-ready report + Overleaf bundle.
+
+execution_policy:
+  run_benchmarks: true
+  run_training: true
+  run_inference: true
+  push_to_remote: false
+  commit: true
+  gate_slice: Q74S
+  gate_campaign: pure_quantum_readout_smoke
+  first_ready_slice: Q69
+  execution_order: [Q69, Q70, Q71, Q72, Q73, Q74, Q75]
+  parallel_eligible: [Q69, Q70, Q71]
+
+dependency_graph:
+  Q69: [Q74S]
+  Q70: [Q74S]
+  Q71: [Q74S]
+  Q72: [Q69, Q70, Q71]
+  Q73: [Q72]
+  Q74: [Q73]
+  Q75: [Q74]
+
+validation_criteria:
+  - pure_quantum_readout_full campaign PLANNED (blocked until Q74S gate)
+  - all slices BLOCKED on Q74S (direct or transitive)
+  - Q69/Q70/Q71 parallel-eligible after Q74S passes
+  - Q72 blocked by all three of Q69/Q70/Q71
+  - Q73 blocked by Q72
+  - Q74 blocked by Q73
+  - Q75 blocked by Q74
+  - 3 seeds required for all benchmarks
+  - VinDr test set evaluation required
+  - y_true/y_score/y_pred saved
+  - SVG figures and LaTeX tables generated
+  - no external quantum frameworks
+  - no push
+
+references:
+  smoke_campaign: workspace/projects/qstrata/campaigns/pure_quantum_readout_smoke.yaml
+  architecture_audit: workspace/experiments/Q64/quantum_architecture_metrics_audit.md
+  redesign_plan: workspace/experiments/Q65/quantum_model_redesign_plan.md
+  metrics_matrix: workspace/experiments/Q65/quantum_metrics_matrix.csv
+  component_audit: workspace/experiments/Q65/quantum_architecture_component_audit.csv
+  recommended_slices: workspace/experiments/Q65/recommended_experiment_campaign.yaml

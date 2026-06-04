@@ -1,0 +1,397 @@
+{
+  "project": "qstrata",
+  "schema_version": "1.0",
+  "last_updated": "2026-06-04",
+  "updated_by": "Q66P-PURE-QUANTUM-READOUT-SMOKE-AND-FULL-CAMPAIGN-PLAN",
+  "campaigns": {
+    "binary_classical_publication_package": {
+      "campaign_id": "binary_classical_publication_package",
+      "status": "PLANNED",
+      "created": "2026-06-02",
+      "description": "Binary classical publication campaign Q55 through Q61",
+      "spec": "workspace/projects/qstrata/campaigns/binary_classical_publication_package.yaml"
+    },
+    "pure_quantum_readout_smoke": {
+      "campaign_id": "pure_quantum_readout_smoke",
+      "status": "ACTIVE",
+      "created": "2026-06-04",
+      "description": "Smoke campaign: pure quantum readout validation (Q66, Q67S, Q68S, Q68DS, Q72S, Q74S)",
+      "spec": "workspace/projects/qstrata/campaigns/pure_quantum_readout_smoke.yaml",
+      "gate_slice": "Q74S",
+      "gate_signal": "READY_FOR_FULL_PURE_QUANTUM_READOUT_CAMPAIGN"
+    },
+    "pure_quantum_readout_full": {
+      "campaign_id": "pure_quantum_readout_full",
+      "status": "PLANNED",
+      "created": "2026-06-04",
+      "description": "Full benchmark: pure quantum readout study (Q69-Q75)",
+      "spec": "workspace/projects/qstrata/campaigns/pure_quantum_readout_full.yaml",
+      "gate_condition": "Q74S must emit READY_FOR_FULL_PURE_QUANTUM_READOUT_CAMPAIGN"
+    }
+  },
+  "slices": [
+    {
+      "name": "Dataset Sample Visualization Pipeline",
+      "campaign": "binary_classical_publication_package",
+      "status": "READY",
+      "depends_on": [],
+      "blocked_by": [],
+      "estimated_runtime": "LOW",
+      "type": "visualization",
+      "id": "Q55",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q55_dataset_sample_visualization_pipeline.md"
+    },
+    {
+      "name": "Binary Classical Discrete Benchmark",
+      "campaign": "binary_classical_publication_package",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q55"
+      ],
+      "blocked_by": [
+        "Q55"
+      ],
+      "estimated_runtime": "MEDIUM",
+      "type": "benchmark",
+      "id": "Q56",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q56_binary_classical_discrete_benchmark.md"
+    },
+    {
+      "name": "Binary Classical Continuous Benchmark",
+      "campaign": "binary_classical_publication_package",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q55",
+        "Q56"
+      ],
+      "blocked_by": [
+        "Q56"
+      ],
+      "estimated_runtime": "MEDIUM",
+      "type": "benchmark",
+      "id": "Q57",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q57_binary_classical_continuous_benchmark.md"
+    },
+    {
+      "name": "Cross-Dataset Binary Benchmark",
+      "campaign": "binary_classical_publication_package",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q55",
+        "Q56",
+        "Q57"
+      ],
+      "blocked_by": [
+        "Q57"
+      ],
+      "estimated_runtime": "MEDIUM",
+      "type": "analysis",
+      "id": "Q58",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q58_cross_dataset_binary_benchmark.md"
+    },
+    {
+      "name": "Binary Statistical Analysis Package",
+      "campaign": "binary_classical_publication_package",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q55",
+        "Q56",
+        "Q57",
+        "Q58"
+      ],
+      "blocked_by": [
+        "Q58"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "analysis",
+      "id": "Q59",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q59_binary_statistical_analysis_package.md"
+    },
+    {
+      "name": "Paper Tables and Figures Export Package",
+      "campaign": "binary_classical_publication_package",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q55",
+        "Q56",
+        "Q57",
+        "Q58",
+        "Q59"
+      ],
+      "blocked_by": [
+        "Q59"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "export",
+      "id": "Q60",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q60_paper_tables_figures_export_package.md"
+    },
+    {
+      "name": "Binary Classification Final Report",
+      "campaign": "binary_classical_publication_package",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q55",
+        "Q56",
+        "Q57",
+        "Q58",
+        "Q59",
+        "Q60"
+      ],
+      "blocked_by": [
+        "Q60"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "report",
+      "id": "Q61",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q61_binary_classification_final_report.md"
+    },
+    {
+      "name": "Pure Quantum Visualization Package",
+      "campaign": "pure_quantum_readout_smoke",
+      "status": "READY",
+      "depends_on": [],
+      "blocked_by": [],
+      "estimated_runtime": "LOW",
+      "type": "visualization",
+      "id": "Q66",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q66_pure_quantum_visualization_package.md"
+    },
+    {
+      "name": "DV-QNN Pure Readout Smoke",
+      "campaign": "pure_quantum_readout_smoke",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q66"
+      ],
+      "blocked_by": [
+        "Q66"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "smoke_test",
+      "id": "Q67S",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q67s_dv_qnn_pure_readout_smoke.md"
+    },
+    {
+      "name": "CV-QNN Single Homodyne Readout Smoke",
+      "campaign": "pure_quantum_readout_smoke",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q66"
+      ],
+      "blocked_by": [
+        "Q66"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "smoke_test",
+      "id": "Q68S",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q68s_cv_qnn_homodyne_readout_smoke.md"
+    },
+    {
+      "name": "CV-QNN Dual Homodyne Readout Smoke",
+      "campaign": "pure_quantum_readout_smoke",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q66"
+      ],
+      "blocked_by": [
+        "Q66"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "smoke_test",
+      "id": "Q68DS",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q68ds_cv_qnn_dual_homodyne_readout_smoke.md"
+    },
+    {
+      "name": "Quantum Metrics Smoke",
+      "campaign": "pure_quantum_readout_smoke",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q67S",
+        "Q68S",
+        "Q68DS"
+      ],
+      "blocked_by": [
+        "Q67S",
+        "Q68S",
+        "Q68DS"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "analysis",
+      "id": "Q72S",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q72s_quantum_metrics_smoke.md"
+    },
+    {
+      "name": "Hybrid vs Pure Smoke Comparison",
+      "campaign": "pure_quantum_readout_smoke",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q72S"
+      ],
+      "blocked_by": [
+        "Q72S"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "analysis",
+      "gate": true,
+      "gate_signal": "READY_FOR_FULL_PURE_QUANTUM_READOUT_CAMPAIGN",
+      "id": "Q74S",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q74s_hybrid_vs_pure_smoke_comparison.md"
+    },
+    {
+      "name": "DV-QNN Pure Readout Full Benchmark",
+      "campaign": "pure_quantum_readout_full",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q74S"
+      ],
+      "blocked_by": [
+        "Q74S"
+      ],
+      "estimated_runtime": "HIGH",
+      "type": "benchmark",
+      "id": "Q69",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q69_dv_qnn_pure_readout_full_benchmark.md"
+    },
+    {
+      "name": "CV-QNN Single Homodyne Readout Full Benchmark",
+      "campaign": "pure_quantum_readout_full",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q74S"
+      ],
+      "blocked_by": [
+        "Q74S"
+      ],
+      "estimated_runtime": "HIGH",
+      "type": "benchmark",
+      "id": "Q70",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q70_cv_qnn_homodyne_readout_full_benchmark.md"
+    },
+    {
+      "name": "CV-QNN Dual Homodyne Readout Full Benchmark",
+      "campaign": "pure_quantum_readout_full",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q74S"
+      ],
+      "blocked_by": [
+        "Q74S"
+      ],
+      "estimated_runtime": "HIGH",
+      "type": "benchmark",
+      "id": "Q71",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q71_cv_qnn_dual_homodyne_readout_full_benchmark.md"
+    },
+    {
+      "name": "Quantum Metrics Extraction",
+      "campaign": "pure_quantum_readout_full",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q69",
+        "Q70",
+        "Q71"
+      ],
+      "blocked_by": [
+        "Q69",
+        "Q70",
+        "Q71"
+      ],
+      "estimated_runtime": "MEDIUM",
+      "type": "analysis",
+      "id": "Q72",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q72_quantum_metrics_extraction.md"
+    },
+    {
+      "name": "Noise Detector Circuit Ablation",
+      "campaign": "pure_quantum_readout_full",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q72"
+      ],
+      "blocked_by": [
+        "Q72"
+      ],
+      "estimated_runtime": "HIGH",
+      "type": "ablation",
+      "id": "Q73",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q73_noise_detector_circuit_ablation.md"
+    },
+    {
+      "name": "Hybrid vs Pure Quantum Comparison",
+      "campaign": "pure_quantum_readout_full",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q73"
+      ],
+      "blocked_by": [
+        "Q73"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "analysis",
+      "id": "Q74",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q74_hybrid_vs_pure_quantum_comparison.md"
+    },
+    {
+      "name": "Pure Quantum Readout Final Report",
+      "campaign": "pure_quantum_readout_full",
+      "status": "BLOCKED",
+      "depends_on": [
+        "Q74"
+      ],
+      "blocked_by": [
+        "Q74"
+      ],
+      "estimated_runtime": "LOW",
+      "type": "report",
+      "id": "Q75",
+      "input_file": "/home/mike/research-projects/QStrata/workspace/projects/qstrata/inputs/q75_pure_quantum_readout_final_report.md"
+    }
+  ],
+  "deferred": [
+    {
+      "slice_id": "Q46C",
+      "name": "tiny_qnn_head — CV Head Re-evaluation on MobileNetV3-Large",
+      "status": "PAUSED",
+      "resume_after": "Q61"
+    },
+    {
+      "phase": "Phase 7 — Multiclass Benchmarking",
+      "status": "DEFERRED",
+      "resume_after": "Q61",
+      "slices": [
+        "M01",
+        "M02",
+        "M03",
+        "M04",
+        "M05"
+      ]
+    }
+  ],
+  "execution_queue": {
+    "next": "Q66",
+    "order": [
+      "Q66",
+      "Q67S",
+      "Q68S",
+      "Q68DS",
+      "Q72S",
+      "Q74S",
+      "Q69",
+      "Q70",
+      "Q71",
+      "Q72",
+      "Q73",
+      "Q74",
+      "Q75"
+    ],
+    "policy": {
+      "run_benchmarks": true,
+      "run_training": true,
+      "commit": true,
+      "push": false,
+      "allow_benchmarks": true
+    },
+    "notes": "Q66 is next. Q67S/Q68S/Q68DS are parallel-eligible after Q66. Full campaign (Q69-Q75) is gated on Q74S."
+  }
+}

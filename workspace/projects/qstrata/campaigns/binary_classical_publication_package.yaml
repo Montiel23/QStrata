@@ -1,0 +1,177 @@
+campaign_id: binary_classical_publication_package
+campaign_version: "1.0"
+created_date: "2026-06-02"
+created_by: Claude Code (Sonnet 4.6) — Q54 slice
+project: qstrata
+description: >
+  Binary classical publication campaign for QStrata VinDr-SpineXR binary classification results.
+  Covers dataset visualization, classical benchmark suites (discrete and continuous), cross-dataset
+  comparison, statistical analysis, paper-ready artifact export, and final report.
+
+scientific_context:
+  dataset: "VinDr-SpineXR (binary ROI: Any Pathology vs No Finding)"
+  dataset_splits:
+    train: 6712
+    val: 1677
+    test: 2077
+    total: 10466
+  winning_backbone: mobilenetv3_large
+  backbone_pretrain: IMAGENET1K_V1
+  backbone_auroc_3seed: 0.9873
+  backbone_ci95: "[0.9862, 0.9885]"
+  embedding_dim: 128
+  embedding_source: workspace/experiments/Q49/embeddings/
+  preprocessing: "CLAHE clip=3.0 tile=4x4"
+  augmentation: none
+  frozen_reference_benchmarks:
+    Q17_classical_cnn: {auroc: 0.6224, f1: 0.5355, params: 23650}
+    Q21_dv_hybrid: {auroc: 0.6800, f1: 0.6159, params: 574}
+    Q22_tiny_classical: {auroc: 0.6625, f1: 0.5961, params: 526}
+    Q27_cv_hybrid: {auroc: 0.6708, f1: 0.6283, params: 536}
+    Q45A_clahe_baseline: {auroc: 0.7196, seeds: 3}
+    Q46B_mobilenetv3_large: {auroc: 0.9873, seeds: 3}
+
+slices:
+  - slice_id: Q55
+    name: Dataset Sample Visualization Pipeline
+    input_spec: workspace/projects/qstrata/inputs/q55_dataset_sample_visualization_pipeline.md
+    status: READY
+    depends_on: []
+    blocked_by: []
+    estimated_runtime: LOW
+    outputs:
+      - workspace/experiments/Q55/figures/class_distribution.png
+      - workspace/experiments/Q55/figures/sample_grid_clahe.png
+      - workspace/experiments/Q55/figures/embedding_umap_train.png
+      - workspace/experiments/Q55/figures/embedding_umap_test.png
+      - workspace/experiments/Q55/figures/embedding_tsne_train.png
+      - workspace/experiments/Q55/reports/q55_dataset_visualization_report.md
+    description: >
+      Visualize dataset splits, project 128-dim Q49 embeddings via UMAP and t-SNE.
+      Produces publication-ready figures for the data section of the paper.
+
+  - slice_id: Q56
+    name: Binary Classical Discrete Benchmark
+    input_spec: workspace/projects/qstrata/inputs/q56_binary_classical_discrete_benchmark.md
+    status: BLOCKED
+    depends_on: [Q55]
+    blocked_by: [Q55]
+    estimated_runtime: MEDIUM
+    outputs:
+      - workspace/experiments/Q56/leaderboards/q56_discrete_benchmark_leaderboard.csv
+      - workspace/experiments/Q56/results/q56_discrete_benchmark_results.json
+      - workspace/experiments/Q56/reports/q56_discrete_benchmark_report.md
+    description: >
+      Evaluate discrete classical ML classifiers on 128-dim Q49 embeddings:
+      Logistic Regression, SVM (linear), k-NN, Naive Bayes, Decision Tree, Random Forest.
+      3 seeds (42, 7, 123).
+
+  - slice_id: Q57
+    name: Binary Classical Continuous Benchmark
+    input_spec: workspace/projects/qstrata/inputs/q57_binary_classical_continuous_benchmark.md
+    status: BLOCKED
+    depends_on: [Q55, Q56]
+    blocked_by: [Q56]
+    estimated_runtime: MEDIUM
+    outputs:
+      - workspace/experiments/Q57/leaderboards/q57_continuous_benchmark_leaderboard.csv
+      - workspace/experiments/Q57/results/q57_continuous_benchmark_results.json
+      - workspace/experiments/Q57/reports/q57_continuous_benchmark_report.md
+    description: >
+      Evaluate continuous/learned classifiers on 128-dim Q49 embeddings:
+      XGBoost, LightGBM, MLP (1-layer, 2-layer), SVM (RBF kernel). 3 seeds (42, 7, 123).
+
+  - slice_id: Q58
+    name: Cross-Dataset Binary Benchmark
+    input_spec: workspace/projects/qstrata/inputs/q58_cross_dataset_binary_benchmark.md
+    status: BLOCKED
+    depends_on: [Q55, Q56, Q57]
+    blocked_by: [Q57]
+    estimated_runtime: MEDIUM
+    outputs:
+      - workspace/experiments/Q58/leaderboards/q58_cross_dataset_leaderboard.csv
+      - workspace/experiments/Q58/results/q58_cross_dataset_results.json
+      - workspace/experiments/Q58/reports/q58_cross_dataset_benchmark_report.md
+    description: >
+      Cross-dataset comparison: VinDr-SpineXR (Q56-Q57 winners) vs PneumoniaMNIST
+      frozen benchmarks (Q17-Q22). Unified table across all model families.
+
+  - slice_id: Q59
+    name: Binary Statistical Analysis Package
+    input_spec: workspace/projects/qstrata/inputs/q59_binary_statistical_analysis_package.md
+    status: BLOCKED
+    depends_on: [Q55, Q56, Q57, Q58]
+    blocked_by: [Q58]
+    estimated_runtime: LOW
+    outputs:
+      - workspace/experiments/Q59/tables/auroc_confidence_intervals.csv
+      - workspace/experiments/Q59/tables/f1_confidence_intervals.csv
+      - workspace/experiments/Q59/figures/roc_curves_comparison.png
+      - workspace/experiments/Q59/figures/pr_curves_comparison.png
+      - workspace/experiments/Q59/reports/q59_statistical_analysis_report.md
+    description: >
+      95% CI (bootstrap n=1000), Wilcoxon signed-rank tests, ROC and PR curve figures.
+
+  - slice_id: Q60
+    name: Paper Tables and Figures Export Package
+    input_spec: workspace/projects/qstrata/inputs/q60_paper_tables_figures_export_package.md
+    status: BLOCKED
+    depends_on: [Q55, Q56, Q57, Q58, Q59]
+    blocked_by: [Q59]
+    estimated_runtime: LOW
+    outputs:
+      - workspace/experiments/Q60/paper/table1_dataset_statistics.tex
+      - workspace/experiments/Q60/paper/table2_binary_classical_leaderboard.tex
+      - workspace/experiments/Q60/paper/table3_cross_dataset_comparison.tex
+      - workspace/experiments/Q60/paper/figure1_embedding_umap.pdf
+      - workspace/experiments/Q60/paper/figure2_roc_curves.pdf
+      - workspace/experiments/Q60/paper/figure3_pr_curves.pdf
+      - workspace/experiments/Q60/paper/figure4_sample_grid.pdf
+      - workspace/experiments/Q60/reports/q60_paper_export_report.md
+    description: >
+      LaTeX tables and PDF/PNG figures at 300 DPI. Unified visual style for manuscript.
+
+  - slice_id: Q61
+    name: Binary Classification Final Report
+    input_spec: workspace/projects/qstrata/inputs/q61_binary_classification_final_report.md
+    status: BLOCKED
+    depends_on: [Q55, Q56, Q57, Q58, Q59, Q60]
+    blocked_by: [Q60]
+    estimated_runtime: LOW
+    outputs:
+      - workspace/experiments/Q61/reports/q61_binary_classification_final_report.md
+      - workspace/projects/qstrata/leaderboards/binary_classical_publication_leaderboard.csv
+    description: >
+      Definitive binary classification report synthesizing Q55-Q60. Canonical Phase 7 gate.
+
+deferred_work:
+  tiny_qnn_head:
+    status: PAUSED
+    reason: Paused until binary_classical_publication_package completes (Q61).
+    resume_after: Q61
+  multiclass:
+    status: DEFERRED
+    reason: Gated on Q61 binary campaign closure before Phase 7 begins.
+    resume_after: Q61
+
+execution_policy:
+  run_benchmarks: false
+  run_training: false
+  push_to_remote: false
+  commit: false
+  first_ready_slice: Q55
+  execution_order: [Q55, Q56, Q57, Q58, Q59, Q60, Q61]
+
+validation_criteria:
+  - binary_classical_publication_package campaign created
+  - Q55 status READY; Q56-Q61 status BLOCKED
+  - dependencies linked correctly
+  - tiny_qnn_head paused; multiclass deferred
+  - no benchmark executed; no training executed; no push
+
+campaign_references:
+  backbone_benchmark: reports/q48_feature_extractor_phase_closure.md
+  embedding_export: workspace/experiments/Q49/embedding_export_report.md
+  augmentation_closure: reports/q45a_q39c_fast_augmentation_closure.md
+  clahe_sweep: reports/q38c_clahe_parameter_sweep.md
+  master_roadmap: docs/roadmaps/qstrata_master_research_roadmap.md

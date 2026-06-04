@@ -1,0 +1,23 @@
+metric,Classical CNN (Q56),DV-QNN (Q57),CV-QNN (Q58),winner
+VinDr AUROC (mean),0.97306,0.88421,0.95339,Classical CNN
+VinDr AUROC CI95,"[0.9685, 0.9776]","[0.8822, 0.8863]","[0.9510, 0.9558]",Classical CNN
+VinDr F1 (mean),0.91530,0.78878,0.87909,Classical CNN
+VinDr F1 CI95,"[0.9009, 0.9297]","[0.7663, 0.8113]","[0.8635, 0.8947]",Classical CNN
+VinDr AUROC std,0.001804,0.000804,0.000971,DV-QNN (most stable)
+BUU-LSPINE AUROC (mean),1.0,1.0,1.0,Tie
+BUU-LSPINE F1 (mean),1.0,0.98983,1.0,CNN / CV-QNN tie
+BUU-LSPINE AUROC CI95,"[1.0, 1.0]","[1.0, 1.0]","[1.0, 1.0]",Tie
+Cross-dataset gen gap (BUU−VinDr AUROC),+0.02694,+0.11579,+0.04661,Classical CNN (smallest gap)
+VinDr Δ vs Q46 winner,-0.01427,-0.10312,-0.03394,Classical CNN
+Trainable params,2250,574,532,CV-QNN (fewest)
+Total params,5608290,5606614,5606572,CV-QNN (fewest)
+Mean VinDr runtime (s),0.57,263.50,56.20,Classical CNN (fastest)
+Mean BUU runtime (s),0.08,39.41,8.49,Classical CNN (fastest)
+VinDr runtime vs CNN,1.0×,462×,99×,Classical CNN
+BUU runtime vs CNN,1.0×,493×,106×,Classical CNN
+CV-QNN vs DV-QNN VinDr AUROC,—,—,+0.06918 (CV better),CV-QNN
+CV-QNN vs DV-QNN runtime,—,—,4.7× faster,CV-QNN
+Architecture type,Classical feed-forward MLP,Discrete-variable QNN,Continuous-variable QNN,—
+Quantum framework,None,Custom qcore DV sim,Custom qcore Gaussian sim,—
+Circuit/head qubits or modes,—,4 qubits depth-1,2 modes depth-1,—
+Backbone,MobileNetV3-Large (frozen),MobileNetV3-Large (frozen),MobileNetV3-Large (frozen),—

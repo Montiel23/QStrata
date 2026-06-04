@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" font-family="monospace,sans-serif">
+<rect width="600" height="380" fill="#fafafa"/>
+<text x="300" y="26" text-anchor="middle" font-size="13" font-weight="bold" fill="#222">Q59: Cross-Dataset Generalization</text>
+<text x="300" y="44" text-anchor="middle" font-size="10" fill="#555">VinDr-SpineXR (solid) vs BUU-LSPINE (light) AUROC — gap = real-world performance drop</text>
+
+<!-- y-axis: 0.80 to 1.05, chart top=55, bottom=295, height=240 -->
+<!-- scale: (val-0.80)/(0.25) * 240 px from bottom -->
+<!-- y_px(v) = 295 - (v-0.80)/0.25 * 240 -->
+
+<!-- Gridlines -->
+<line x1="70" y1="55" x2="580" y2="55" stroke="#ddd" stroke-width="1"/>
+<text x="65" y="59" text-anchor="end" font-size="9" fill="#555">1.05</text>
+<line x1="70" y1="103" x2="580" y2="103" stroke="#ddd" stroke-width="1"/>
+<text x="65" y="107" text-anchor="end" font-size="9" fill="#555">1.00</text>
+<line x1="70" y1="151" x2="580" y2="151" stroke="#ddd" stroke-width="1"/>
+<text x="65" y="155" text-anchor="end" font-size="9" fill="#555">0.95</text>
+<line x1="70" y1="199" x2="580" y2="199" stroke="#ddd" stroke-width="1"/>
+<text x="65" y="203" text-anchor="end" font-size="9" fill="#555">0.90</text>
+<line x1="70" y1="247" x2="580" y2="247" stroke="#ddd" stroke-width="1"/>
+<text x="65" y="251" text-anchor="end" font-size="9" fill="#555">0.85</text>
+<line x1="70" y1="295" x2="580" y2="295" stroke="#ddd" stroke-width="1"/>
+<text x="65" y="299" text-anchor="end" font-size="9" fill="#555">0.80</text>
+
+<!-- Axes -->
+<line x1="70" y1="295" x2="580" y2="295" stroke="#888" stroke-width="1.5"/>
+<line x1="70" y1="55" x2="70" y2="295" stroke="#888" stroke-width="1.5"/>
+
+<!-- y-axis label -->
+<text x="14" y="175" text-anchor="middle" font-size="11" fill="#333" transform="rotate(-90,14,175)">AUROC</text>
+
+<!-- ============ Classical CNN ============ -->
+<!-- VinDr: 0.97306 → y=295-(0.17306/0.25)*240=295-166.1=128.9 -->
+<!-- BUU: 1.0 → y=295-(0.20/0.25)*240=295-192=103 -->
+<rect x="100" y="129" width="50" height="166" fill="#2166ac" opacity="0.90"/>
+<text x="125" y="125" text-anchor="middle" font-size="8" fill="#222">0.9731</text>
+<rect x="155" y="103" width="50" height="192" fill="#2166ac" opacity="0.35"/>
+<text x="180" y="99" text-anchor="middle" font-size="8" fill="#444">1.0000</text>
+<!-- gap annotation Δ=+0.02694 -->
+<text x="140" y="314" text-anchor="middle" font-size="9" fill="#c00">Δ=+0.027</text>
+<!-- arch label -->
+<text x="152" y="330" text-anchor="middle" font-size="9" fill="#333">Classical CNN</text>
+
+<!-- ============ DV-QNN ============ -->
+<!-- VinDr: 0.88421 → y=295-(0.08421/0.25)*240=295-80.8=214.2 -->
+<!-- BUU: 1.0 → y=103 -->
+<rect x="240" y="214" width="50" height="81" fill="#d6604d" opacity="0.90"/>
+<text x="265" y="210" text-anchor="middle" font-size="8" fill="#222">0.8842</text>
+<rect x="295" y="103" width="50" height="192" fill="#d6604d" opacity="0.35"/>
+<text x="320" y="99" text-anchor="middle" font-size="8" fill="#444">1.0000</text>
+<!-- gap Δ=+0.11579 -->
+<text x="280" y="314" text-anchor="middle" font-size="9" fill="#c00">Δ=+0.116</text>
+<text x="292" y="330" text-anchor="middle" font-size="9" fill="#333">DV-QNN</text>
+
+<!-- ============ CV-QNN ============ -->
+<!-- VinDr: 0.95339 → y=295-(0.15339/0.25)*240=295-147.3=147.7 -->
+<!-- BUU: 1.0 → y=103 -->
+<rect x="380" y="148" width="50" height="147" fill="#4dac26" opacity="0.90"/>
+<text x="405" y="144" text-anchor="middle" font-size="8" fill="#222">0.9534</text>
+<rect x="435" y="103" width="50" height="192" fill="#4dac26" opacity="0.35"/>
+<text x="460" y="99" text-anchor="middle" font-size="8" fill="#444">1.0000</text>
+<!-- gap Δ=+0.04661 -->
+<text x="420" y="314" text-anchor="middle" font-size="9" fill="#c00">Δ=+0.047</text>
+<text x="432" y="330" text-anchor="middle" font-size="9" fill="#333">CV-QNN</text>
+
+<!-- Legend -->
+<rect x="70" y="348" width="12" height="10" fill="#666" opacity="0.9"/>
+<text x="86" y="357" font-size="9" fill="#333">VinDr-SpineXR (real data)</text>
+<rect x="240" y="348" width="12" height="10" fill="#666" opacity="0.4"/>
+<text x="256" y="357" font-size="9" fill="#333">BUU-LSPINE (synthetic)</text>
+<text x="70" y="372" font-size="9" fill="#c00">Δ = generalization gap (smaller is better)</text>
+</svg>

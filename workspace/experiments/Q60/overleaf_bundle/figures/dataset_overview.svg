@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Dataset Overview Figure — Q60-PAPER-ARTIFACTS-EXPORT
+  Side-by-side description of VinDr-SpineXR and BUU-LSPINE datasets
+  with key statistics and example class distributions
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 480" width="860" height="480"
+     font-family="'Helvetica Neue', Arial, sans-serif">
+
+  <rect width="860" height="480" fill="#ffffff"/>
+
+  <text x="430" y="34" text-anchor="middle" font-size="16" font-weight="bold" fill="#1a1a2e">
+    Dataset Overview: Binary Spine X-Ray Classification
+  </text>
+  <text x="430" y="54" text-anchor="middle" font-size="11" fill="#666">
+    Both datasets used in Q56–Q58 benchmarks with identical training protocol
+  </text>
+
+  <!-- LEFT: VinDr-SpineXR -->
+  <rect x="30" y="70" width="390" height="380" fill="#f0f6ff" rx="8" stroke="#c8daf5" stroke-width="1.5"/>
+  <text x="225" y="98" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a4a8a">VinDr-SpineXR</text>
+  <text x="225" y="114" text-anchor="middle" font-size="10" fill="#555">Real clinical DICOM spine X-rays · Vietnam</text>
+  <line x1="50" y1="122" x2="400" y2="122" stroke="#c8daf5" stroke-width="1"/>
+
+  <text x="60" y="145" font-size="11" font-weight="bold" fill="#1a4a8a">Dataset statistics</text>
+  <text x="65"  y="165" font-size="11" fill="#333">Modality</text>
+  <text x="240" y="165" font-size="11" fill="#555">Digital radiograph (DICOM), anterior-posterior</text>
+  <text x="65"  y="183" font-size="11" fill="#333">Source</text>
+  <text x="240" y="183" font-size="11" fill="#555">VinBigData Institute of Big Data Science</text>
+  <text x="65"  y="201" font-size="11" fill="#333">Task</text>
+  <text x="240" y="201" font-size="11" fill="#555">Binary: abnormal vs. normal vertebrae</text>
+  <text x="65"  y="219" font-size="11" fill="#333">Splits</text>
+  <text x="240" y="219" font-size="11" fill="#555">Official train / val / test partition</text>
+  <text x="65"  y="237" font-size="11" fill="#333">Image size</text>
+  <text x="240" y="237" font-size="11" fill="#555">Variable (resized to 224 × 224 for inference)</text>
+  <text x="65"  y="255" font-size="11" fill="#333">Preprocessing</text>
+  <text x="240" y="255" font-size="11" fill="#555">CLAHE + ImageNet normalisation</text>
+  <text x="65"  y="273" font-size="11" fill="#333">Difficulty</text>
+  <text x="240" y="273" font-size="11" fill="#555">High — inter-reader variability, subtle lesions</text>
+
+  <text x="140" y="305" text-anchor="middle" font-size="11" font-weight="bold" fill="#1a4a8a">Class distribution</text>
+  <circle cx="140" cy="355" r="45" fill="none" stroke="#e84855" stroke-width="28"
+          stroke-dasharray="158 124" stroke-dashoffset="-62" transform="rotate(-90 140 355)"/>
+  <circle cx="140" cy="355" r="45" fill="none" stroke="#2e86ab" stroke-width="28"
+          stroke-dasharray="124 158" stroke-dashoffset="-220" transform="rotate(-90 140 355)"/>
+  <text x="140" y="351" text-anchor="middle" font-size="10" fill="#333">~56%</text>
+  <text x="140" y="363" text-anchor="middle" font-size="10" fill="#333">abnormal</text>
+  <rect x="205" y="335" width="14" height="12" fill="#e84855" rx="2"/>
+  <text x="224" y="346" font-size="10" fill="#333">Abnormal (positive)</text>
+  <rect x="205" y="357" width="14" height="12" fill="#2e86ab" rx="2"/>
+  <text x="224" y="368" font-size="10" fill="#333">Normal (negative)</text>
+
+  <rect x="270" y="390" width="130" height="44" fill="#1a4a8a" rx="6"/>
+  <text x="335" y="408" text-anchor="middle" font-size="10" fill="#fff">Best AUROC (CNN)</text>
+  <text x="335" y="426" text-anchor="middle" font-size="16" font-weight="bold" fill="#7ec8e3">0.9731</text>
+
+  <!-- RIGHT: BUU-LSPINE -->
+  <rect x="440" y="70" width="390" height="380" fill="#f0fff4" rx="8" stroke="#b2dfdb" stroke-width="1.5"/>
+  <text x="635" y="98" text-anchor="middle" font-size="14" font-weight="bold" fill="#1a6e4a">BUU-LSPINE</text>
+  <text x="635" y="114" text-anchor="middle" font-size="10" fill="#555">Synthetic lumbar spine X-rays · Burapha University</text>
+  <line x1="460" y1="122" x2="810" y2="122" stroke="#b2dfdb" stroke-width="1"/>
+
+  <text x="465" y="145" font-size="11" font-weight="bold" fill="#1a6e4a">Dataset statistics</text>
+  <text x="465" y="165" font-size="11" fill="#333">Modality</text>
+  <text x="645" y="165" font-size="11" fill="#555">Synthetic DRR (digitally reconstructed radiograph)</text>
+  <text x="465" y="183" font-size="11" fill="#333">Source</text>
+  <text x="645" y="183" font-size="11" fill="#555">Burapha University, Thailand</text>
+  <text x="465" y="201" font-size="11" fill="#333">Task</text>
+  <text x="645" y="201" font-size="11" fill="#555">Binary: spondylolisthesis vs. normal</text>
+  <text x="465" y="219" font-size="11" fill="#333">Splits</text>
+  <text x="645" y="219" font-size="11" fill="#555">Standard train / test split</text>
+  <text x="465" y="237" font-size="11" fill="#333">Image size</text>
+  <text x="645" y="237" font-size="11" fill="#555">Fixed (resized to 224 × 224 for inference)</text>
+  <text x="465" y="255" font-size="11" fill="#333">Preprocessing</text>
+  <text x="645" y="255" font-size="11" fill="#555">ImageNet normalisation only (no CLAHE needed)</text>
+  <text x="465" y="273" font-size="11" fill="#333">Difficulty</text>
+  <text x="645" y="273" font-size="11" fill="#555">Low — synthetic images, clear class separation</text>
+
+  <text x="545" y="305" text-anchor="middle" font-size="11" font-weight="bold" fill="#1a6e4a">Class distribution</text>
+  <circle cx="545" cy="355" r="45" fill="none" stroke="#3bb273" stroke-width="28"
+          stroke-dasharray="141 141" stroke-dashoffset="-70" transform="rotate(-90 545 355)"/>
+  <circle cx="545" cy="355" r="45" fill="none" stroke="#a8d5ba" stroke-width="28"
+          stroke-dasharray="141 141" stroke-dashoffset="-211" transform="rotate(-90 545 355)"/>
+  <text x="545" y="351" text-anchor="middle" font-size="10" fill="#333">~50%</text>
+  <text x="545" y="363" text-anchor="middle" font-size="10" fill="#333">each class</text>
+  <rect x="613" y="335" width="14" height="12" fill="#3bb273" rx="2"/>
+  <text x="632" y="346" font-size="10" fill="#333">Spondylolisthesis</text>
+  <rect x="613" y="357" width="14" height="12" fill="#a8d5ba" rx="2"/>
+  <text x="632" y="368" font-size="10" fill="#333">Normal</text>
+
+  <rect x="670" y="390" width="140" height="44" fill="#1a6e4a" rx="6"/>
+  <text x="740" y="408" text-anchor="middle" font-size="10" fill="#fff">All models AUROC</text>
+  <text x="740" y="426" text-anchor="middle" font-size="16" font-weight="bold" fill="#7effc0">1.0000</text>
+
+  <text x="430" y="468" text-anchor="middle" font-size="9" fill="#aaa">
+    QStrata Phase 6b · Q60-PAPER-ARTIFACTS-EXPORT · 2026-06-03
+    · BUU-LSPINE saturated (AUROC 1.0 all models) — VinDr-SpineXR is the discriminating benchmark
+  </text>
+</svg>

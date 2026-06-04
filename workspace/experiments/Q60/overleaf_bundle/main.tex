@@ -1,0 +1,49 @@
+\documentclass[twocolumn]{article}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{threeparttable}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+
+\title{Binary Spine X-Ray Classification:\\
+  Classical CNN vs.\ Discrete-Variable and Continuous-Variable Quantum Neural Networks}
+\author{QStrata Research Team}
+\date{2026}
+
+\begin{document}
+\maketitle
+
+\section{Experiment Setup}
+\input{tables/experiment_setup_table}
+
+\section{Architecture Comparison}
+\input{tables/architecture_table}
+
+\section{Parameter Efficiency}
+\input{tables/parameter_table}
+
+\section{Results}
+\input{tables/main_results_table}
+
+\section{Figures}
+
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/dataset_overview}
+  \caption{Dataset overview: VinDr-SpineXR (real DICOM) and BUU-LSPINE (synthetic).}
+  \label{fig:datasets}
+\end{figure}
+
+\begin{figure*}[htbp]
+  \centering
+  \includegraphics[width=\linewidth]{figures/main_comparison_figure}
+  \caption{Five-panel comparison across architectures and datasets.
+    (A) VinDr AUROC. (B) BUU-LSPINE AUROC.
+    (C) Training runtime (log scale). (D) Cross-dataset generalisation gap.
+    (E) Trainable parameter counts.}
+  \label{fig:main_comparison}
+\end{figure*}
+
+\end{document}

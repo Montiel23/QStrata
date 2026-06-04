@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Main Comparison Figure — Q60-PAPER-ARTIFACTS-EXPORT
+  Three-way architecture comparison: Classical CNN vs DV-QNN vs CV-QNN
+  Datasets: VinDr-SpineXR (real) and BUU-LSPINE (synthetic)
+  Metrics: AUROC (primary), F1 (secondary), Runtime (tertiary)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 900 620" width="900" height="620" font-family="'Helvetica Neue', Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="900" height="620" fill="#ffffff"/>
+
+  <!-- ============================================================
+       TITLE
+       ============================================================ -->
+  <text x="450" y="34" text-anchor="middle" font-size="16" font-weight="bold" fill="#1a1a2e">
+    Binary Classification Benchmark: CNN vs. DV-QNN vs. CV-QNN
+  </text>
+  <text x="450" y="54" text-anchor="middle" font-size="12" fill="#555">
+    VinDr-SpineXR (Real DICOM) · BUU-LSPINE (Synthetic) · 3 seeds, 4 epochs, Adam lr=1e-3
+  </text>
+
+  <!-- ============================================================
+       PANEL A — AUROC BAR CHART (VinDr)
+       ============================================================ -->
+  <text x="220" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a1a2e">(A) VinDr-SpineXR — AUROC</text>
+
+  <!-- Axes -->
+  <line x1="80" y1="310" x2="360" y2="310" stroke="#333" stroke-width="1.2"/>
+  <line x1="80" y1="95"  x2="80"  y2="310" stroke="#333" stroke-width="1.2"/>
+
+  <!-- Y-axis labels (0.80 – 1.00) -->
+  <text x="75" y="314" text-anchor="end" font-size="10" fill="#555">0.80</text>
+  <text x="75" y="261" text-anchor="end" font-size="10" fill="#555">0.85</text>
+  <text x="75" y="208" text-anchor="end" font-size="10" fill="#555">0.90</text>
+  <text x="75" y="155" text-anchor="end" font-size="10" fill="#555">0.95</text>
+  <text x="75" y="102" text-anchor="end" font-size="10" fill="#555">1.00</text>
+
+  <!-- Gridlines -->
+  <line x1="80" y1="261" x2="360" y2="261" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="80" y1="208" x2="360" y2="208" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="80" y1="155" x2="360" y2="155" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="80" y1="102" x2="360" y2="102" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+
+  <!-- Y-axis unit: 0.05 AUROC = (310-102)/4 * 0.05/0.05 = 52px per 0.05 -->
+  <!-- AUROC 0.80 → y=310; 1.00 → y=102. Scale: (1.00-0.80)=0.20 → 208px. 1 unit = 208/0.20 = 1040px. -->
+  <!-- CNN: 0.9731 → y = 310 - (0.9731-0.80)*1040 = 310 - 179.9 = 130.1 -->
+  <!-- DV:  0.8842 → y = 310 - (0.8842-0.80)*1040 = 310 - 87.6  = 222.4 -->
+  <!-- CV:  0.9534 → y = 310 - (0.9534-0.80)*1040 = 310 - 159.5 = 150.5 -->
+
+  <!-- Bar: CNN -->
+  <rect x="105" y="130" width="60" height="180" fill="#2e86ab" rx="3"/>
+  <text x="135" y="125" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e86ab">0.9731</text>
+  <text x="135" y="325" text-anchor="middle" font-size="10" fill="#333">CNN</text>
+
+  <!-- Error bar CNN: std=0.0018 → 0.0018*1040=1.9px -->
+  <line x1="135" y1="128" x2="135" y2="132" stroke="#1a5276" stroke-width="2"/>
+  <line x1="128" y1="128" x2="142" y2="128" stroke="#1a5276" stroke-width="2"/>
+  <line x1="128" y1="132" x2="142" y2="132" stroke="#1a5276" stroke-width="2"/>
+
+  <!-- Bar: DV-QNN -->
+  <rect x="188" y="222" width="60" height="88" fill="#e84855" rx="3"/>
+  <text x="218" y="217" text-anchor="middle" font-size="10" font-weight="bold" fill="#e84855">0.8842</text>
+  <text x="218" y="325" text-anchor="middle" font-size="10" fill="#333">DV-QNN</text>
+
+  <!-- Error bar DV: std=0.0008 → 0.83px ≈ 1px -->
+  <line x1="218" y1="221" x2="218" y2="223" stroke="#922b21" stroke-width="2"/>
+  <line x1="211" y1="221" x2="225" y2="221" stroke="#922b21" stroke-width="2"/>
+  <line x1="211" y1="223" x2="225" y2="223" stroke="#922b21" stroke-width="2"/>
+
+  <!-- Bar: CV-QNN -->
+  <rect x="271" y="150" width="60" height="160" fill="#3bb273" rx="3"/>
+  <text x="301" y="145" text-anchor="middle" font-size="10" font-weight="bold" fill="#3bb273">0.9534</text>
+  <text x="301" y="325" text-anchor="middle" font-size="10" fill="#333">CV-QNN</text>
+
+  <!-- Error bar CV: std=0.0010 → 1.04px ≈ 1px -->
+  <line x1="301" y1="149" x2="301" y2="152" stroke="#1e8449" stroke-width="2"/>
+  <line x1="294" y1="149" x2="308" y2="149" stroke="#1e8449" stroke-width="2"/>
+  <line x1="294" y1="152" x2="308" y2="152" stroke="#1e8449" stroke-width="2"/>
+
+  <!-- Y-axis title -->
+  <text x="30" y="210" text-anchor="middle" font-size="11" fill="#444" transform="rotate(-90,30,210)">AUROC</text>
+
+  <!-- ============================================================
+       PANEL B — AUROC BAR CHART (BUU-LSPINE)
+       ============================================================ -->
+  <text x="530" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a1a2e">(B) BUU-LSPINE — AUROC</text>
+
+  <!-- Axes -->
+  <line x1="390" y1="310" x2="670" y2="310" stroke="#333" stroke-width="1.2"/>
+  <line x1="390" y1="95"  x2="390" y2="310" stroke="#333" stroke-width="1.2"/>
+
+  <!-- Y-axis labels -->
+  <text x="385" y="314" text-anchor="end" font-size="10" fill="#555">0.80</text>
+  <text x="385" y="261" text-anchor="end" font-size="10" fill="#555">0.85</text>
+  <text x="385" y="208" text-anchor="end" font-size="10" fill="#555">0.90</text>
+  <text x="385" y="155" text-anchor="end" font-size="10" fill="#555">0.95</text>
+  <text x="385" y="102" text-anchor="end" font-size="10" fill="#555">1.00</text>
+
+  <line x1="390" y1="261" x2="670" y2="261" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="390" y1="208" x2="670" y2="208" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="390" y1="155" x2="670" y2="155" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="390" y1="102" x2="670" y2="102" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+
+  <!-- All three: AUROC = 1.0000 → y=102, height=208 -->
+  <rect x="415" y="102" width="60" height="208" fill="#2e86ab" rx="3"/>
+  <text x="445" y="97" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e86ab">1.0000</text>
+  <text x="445" y="325" text-anchor="middle" font-size="10" fill="#333">CNN</text>
+
+  <rect x="498" y="102" width="60" height="208" fill="#e84855" rx="3"/>
+  <text x="528" y="97" text-anchor="middle" font-size="10" font-weight="bold" fill="#e84855">1.0000</text>
+  <text x="528" y="325" text-anchor="middle" font-size="10" fill="#333">DV-QNN</text>
+
+  <rect x="581" y="102" width="60" height="208" fill="#3bb273" rx="3"/>
+  <text x="611" y="97" text-anchor="middle" font-size="10" font-weight="bold" fill="#3bb273">1.0000</text>
+  <text x="611" y="325" text-anchor="middle" font-size="10" fill="#333">CV-QNN</text>
+
+  <text x="340" y="210" text-anchor="middle" font-size="11" fill="#444" transform="rotate(-90,340,210)">AUROC</text>
+
+  <!-- ============================================================
+       PANEL C — RUNTIME (LOG SCALE)
+       ============================================================ -->
+  <text x="810" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a1a2e">(C) VinDr Runtime (log scale)</text>
+
+  <!-- Axes -->
+  <line x1="700" y1="310" x2="890" y2="310" stroke="#333" stroke-width="1.2"/>
+  <line x1="700" y1="95"  x2="700" y2="310" stroke="#333" stroke-width="1.2"/>
+
+  <!-- Log scale: log10(0.57)=-0.244, log10(56.2)=1.750, log10(263.5)=2.421 -->
+  <!-- Map log10 range: -0.5 to 2.7 → 215px. Scale: 215/3.2 = 67.2px/decade -->
+  <!-- y = 310 - (log10(x) - (-0.5)) * 67.2 -->
+  <!-- CNN: 310 - ((-0.244)+0.5)*67.2 = 310 - 17.2 = 292.8 -->
+  <!-- CV:  310 - (1.750+0.5)*67.2   = 310 - 151.2= 158.8 -->
+  <!-- DV:  310 - (2.421+0.5)*67.2   = 310 - 196.3= 113.7 -->
+
+  <!-- Y-axis labels -->
+  <text x="695" y="314" text-anchor="end" font-size="9" fill="#555">0.1s</text>
+  <text x="695" y="247" text-anchor="end" font-size="9" fill="#555">1s</text>
+  <text x="695" y="180" text-anchor="end" font-size="9" fill="#555">10s</text>
+  <text x="695" y="113" text-anchor="end" font-size="9" fill="#555">100s</text>
+
+  <line x1="700" y1="247" x2="890" y2="247" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="700" y1="180" x2="890" y2="180" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="700" y1="113" x2="890" y2="113" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+
+  <!-- Bar: CNN (0.57s) -->
+  <rect x="715" y="293" width="44" height="17" fill="#2e86ab" rx="2"/>
+  <text x="737" y="289" text-anchor="middle" font-size="9" fill="#2e86ab">0.57s</text>
+  <text x="737" y="325" text-anchor="middle" font-size="9" fill="#333">CNN</text>
+
+  <!-- Bar: CV-QNN (56.2s) -->
+  <rect x="773" y="159" width="44" height="151" fill="#3bb273" rx="2"/>
+  <text x="795" y="154" text-anchor="middle" font-size="9" fill="#3bb273">56.2s</text>
+  <text x="795" y="325" text-anchor="middle" font-size="9" fill="#333">CV-QNN</text>
+
+  <!-- Bar: DV-QNN (263.5s) -->
+  <rect x="831" y="114" width="44" height="196" fill="#e84855" rx="2"/>
+  <text x="853" y="109" text-anchor="middle" font-size="9" fill="#e84855">263.5s</text>
+  <text x="853" y="325" text-anchor="middle" font-size="9" fill="#333">DV-QNN</text>
+
+  <text x="660" y="210" text-anchor="middle" font-size="10" fill="#444" transform="rotate(-90,660,210)">Runtime (s)</text>
+
+  <!-- ============================================================
+       PANEL D — GENERALIZATION GAP (BUU - VinDr AUROC)
+       ============================================================ -->
+  <text x="220" y="360" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a1a2e">(D) Cross-Dataset Generalization Gap</text>
+  <text x="220" y="374" text-anchor="middle" font-size="10" fill="#777">BUU-LSPINE AUROC − VinDr AUROC (smaller = more robust)</text>
+
+  <!-- Axes -->
+  <line x1="80" y1="560" x2="360" y2="560" stroke="#333" stroke-width="1.2"/>
+  <line x1="80" y1="385" x2="80"  y2="560" stroke="#333" stroke-width="1.2"/>
+
+  <!-- Y-axis (0 to 0.14) → 175px. Scale: 175/0.14 = 1250px/unit -->
+  <text x="75" y="564" text-anchor="end" font-size="10" fill="#555">0.00</text>
+  <text x="75" y="520" text-anchor="end" font-size="10" fill="#555">0.04</text>
+  <text x="75" y="475" text-anchor="end" font-size="10" fill="#555">0.08</text>
+  <text x="75" y="430" text-anchor="end" font-size="10" fill="#555">0.12</text>
+
+  <line x1="80" y1="520" x2="360" y2="520" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="80" y1="475" x2="360" y2="475" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="80" y1="430" x2="360" y2="430" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+
+  <!-- CNN gap: 0.02694 → height = 0.02694*1250=33.7 → y=560-33.7=526.3 -->
+  <!-- CV gap:  0.04661 → height = 0.04661*1250=58.3 → y=560-58.3=501.7 -->
+  <!-- DV gap:  0.11579 → height = 0.11579*1250=144.7→ y=560-144.7=415.3 -->
+
+  <rect x="105" y="526" width="60" height="34" fill="#2e86ab" rx="3"/>
+  <text x="135" y="521" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e86ab">0.027</text>
+  <text x="135" y="575" text-anchor="middle" font-size="10" fill="#333">CNN</text>
+
+  <rect x="188" y="415" width="60" height="145" fill="#e84855" rx="3"/>
+  <text x="218" y="410" text-anchor="middle" font-size="10" font-weight="bold" fill="#e84855">0.116</text>
+  <text x="218" y="575" text-anchor="middle" font-size="10" fill="#333">DV-QNN</text>
+
+  <rect x="271" y="502" width="60" height="58" fill="#3bb273" rx="3"/>
+  <text x="301" y="497" text-anchor="middle" font-size="10" font-weight="bold" fill="#3bb273">0.047</text>
+  <text x="301" y="575" text-anchor="middle" font-size="10" fill="#333">CV-QNN</text>
+
+  <text x="30" y="475" text-anchor="middle" font-size="11" fill="#444" transform="rotate(-90,30,475)">AUROC gap</text>
+
+  <!-- ============================================================
+       PANEL E — PARAMETER EFFICIENCY
+       ============================================================ -->
+  <text x="530" y="360" text-anchor="middle" font-size="13" font-weight="bold" fill="#1a1a2e">(E) Trainable Parameters</text>
+
+  <!-- Axes -->
+  <line x1="390" y1="560" x2="670" y2="560" stroke="#333" stroke-width="1.2"/>
+  <line x1="390" y1="385" x2="390" y2="560" stroke="#333" stroke-width="1.2"/>
+
+  <!-- Y-axis (0–2500) → 175px. Scale: 175/2500 = 0.07px/param -->
+  <text x="385" y="564" text-anchor="end" font-size="10" fill="#555">0</text>
+  <text x="385" y="494" text-anchor="end" font-size="10" fill="#555">1000</text>
+  <text x="385" y="424" text-anchor="end" font-size="10" fill="#555">2000</text>
+
+  <line x1="390" y1="494" x2="670" y2="494" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <line x1="390" y1="424" x2="670" y2="424" stroke="#e0e0e0" stroke-width="0.8" stroke-dasharray="4,3"/>
+
+  <!-- CNN: 2250 → height=2250*0.07=157.5, y=560-157.5=402.5 -->
+  <!-- DV:   574 → height=574*0.07=40.2,   y=560-40.2=519.8  -->
+  <!-- CV:   532 → height=532*0.07=37.2,   y=560-37.2=522.8  -->
+
+  <rect x="415" y="403" width="60" height="157" fill="#2e86ab" rx="3"/>
+  <text x="445" y="398" text-anchor="middle" font-size="10" font-weight="bold" fill="#2e86ab">2,250</text>
+  <text x="445" y="575" text-anchor="middle" font-size="10" fill="#333">CNN</text>
+
+  <rect x="498" y="520" width="60" height="40" fill="#e84855" rx="3"/>
+  <text x="528" y="515" text-anchor="middle" font-size="10" font-weight="bold" fill="#e84855">574</text>
+  <text x="528" y="575" text-anchor="middle" font-size="10" fill="#333">DV-QNN</text>
+
+  <rect x="581" y="523" width="60" height="37" fill="#3bb273" rx="3"/>
+  <text x="611" y="518" text-anchor="middle" font-size="10" font-weight="bold" fill="#3bb273">532</text>
+  <text x="611" y="575" text-anchor="middle" font-size="10" fill="#333">CV-QNN</text>
+
+  <text x="340" y="475" text-anchor="middle" font-size="11" fill="#444" transform="rotate(-90,340,475)">Trainable params</text>
+
+  <!-- ============================================================
+       LEGEND (bottom-right)
+       ============================================================ -->
+  <rect x="700" y="370" width="180" height="80" fill="#f8f8f8" rx="5" stroke="#ccc" stroke-width="1"/>
+  <text x="790" y="388" text-anchor="middle" font-size="11" font-weight="bold" fill="#333">Legend</text>
+
+  <rect x="715" y="397" width="16" height="14" fill="#2e86ab" rx="2"/>
+  <text x="737" y="409" font-size="11" fill="#333">Classical CNN (Q56)</text>
+
+  <rect x="715" y="416" width="16" height="14" fill="#e84855" rx="2"/>
+  <text x="737" y="428" font-size="11" fill="#333">DV-QNN (Q57)</text>
+
+  <rect x="715" y="435" width="16" height="14" fill="#3bb273" rx="2"/>
+  <text x="737" y="447" font-size="11" fill="#333">CV-QNN (Q58)</text>
+
+  <!-- ============================================================
+       FOOTER
+       ============================================================ -->
+  <text x="450" y="600" text-anchor="middle" font-size="9" fill="#aaa">
+    QStrata Phase 6b · Experiments Q56–Q58 · Generated by Q60-PAPER-ARTIFACTS-EXPORT · 2026-06-03
+  </text>
+</svg>

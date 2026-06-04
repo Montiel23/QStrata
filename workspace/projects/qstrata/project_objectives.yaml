@@ -1,0 +1,133 @@
+project: qstrata
+schema_version: "1.0"
+last_updated: "2026-06-02"
+updated_by: Q54-BINARY-CLASSICAL-PUBLICATION-CAMPAIGN-PLAN
+
+description: >
+  QStrata project objectives — binary classical publication phase.
+  Tracks the current scientific goals, performance targets, and phase gate conditions.
+
+current_phase: Phase 6b (Binary Performance Uplift) + binary_classical_publication_package
+
+performance_baselines:
+  q17_classical_cnn:
+    auroc: 0.6224
+    f1: 0.5355
+    params: 23650
+    status: FROZEN
+    source: reports/vindr_classical_baseline_full_training.md
+  q21_dv_hybrid:
+    auroc: 0.6800
+    f1: 0.6159
+    params: 574
+    status: FROZEN
+    source: reports/vindr_dv_hybrid_pretrained_full_training.md
+  q22_tiny_classical:
+    auroc: 0.6625
+    f1: 0.5961
+    params: 526
+    status: FROZEN
+    source: reports/vindr_classical_control_tiny_head.md
+  q27_cv_hybrid:
+    auroc: 0.6708
+    f1: 0.6283
+    params: 536
+    status: FROZEN
+    source: reports/q27_cv_binary_full_training.md
+  q45a_clahe_baseline:
+    auroc: 0.7196
+    seeds: 3
+    status: FROZEN
+    source: reports/q45a_q39c_fast_augmentation_closure.md
+  q46b_mobilenetv3_large:
+    auroc: 0.9873
+    auroc_std: 0.0004
+    ci95: "[0.9862, 0.9885]"
+    f1: 0.9331
+    seeds: 3
+    status: FROZEN
+    source: reports/q48_feature_extractor_phase_closure.md
+
+objectives:
+  reach_auroc_80_binary:
+    target: 0.80
+    status: EXCEEDED
+    achieved: 0.9873
+    achieved_by: Q46B (mobilenetv3_large)
+    closed: "2026-06-02"
+
+  reach_auroc_90_binary_if_feasible:
+    target: 0.90
+    status: ACHIEVED
+    achieved: 0.9873
+    achieved_by: Q46B (mobilenetv3_large)
+    closed: "2026-06-02"
+
+  binary_classical_publication:
+    description: >
+      Produce a publication-ready binary classical benchmark package including dataset
+      visualization, discrete and continuous classical ML benchmarks on the MobileNetV3-Large
+      embeddings, cross-dataset comparison, statistical analysis, and a final report.
+    status: IN_PROGRESS
+    campaign: binary_classical_publication_package
+    gate_slice: Q61
+    slices: [Q55, Q56, Q57, Q58, Q59, Q60, Q61]
+    first_ready: Q55
+
+  multiclass_benchmarking:
+    description: >
+      Extend binary protocols to multiclass classification (VinDr-SpineXR multiclass,
+      PathMNIST). Requires stable optimized binary baselines.
+    status: DEFERRED
+    gate_condition: binary_classical_publication_package complete (Q61 DONE)
+    resume_after: Q61
+
+phases:
+  feature_extractor:
+    status: COMPLETE
+    winner: mobilenetv3_large
+    winner_auroc: 0.9873
+    winner_params_backbone: 2971952
+    closure_slice: Q48
+    closure_report: reports/q48_feature_extractor_phase_closure.md
+    closed_date: "2026-06-02"
+
+  embedding_export:
+    status: COMPLETE
+    backbone: mobilenetv3_large
+    embedding_dim: 128
+    preprocessing: "CLAHE clip=3.0 tile=4x4"
+    artifacts:
+      train: workspace/experiments/Q49/embeddings/train_embeddings.npy
+      val: workspace/experiments/Q49/embeddings/val_embeddings.npy
+      test: workspace/experiments/Q49/embeddings/test_embeddings.npy
+    closure_slice: Q49
+    closure_report: workspace/experiments/Q49/embedding_export_report.md
+    closed_date: "2026-06-02"
+
+  tiny_qnn_head:
+    status: PAUSED
+    description: >
+      Re-evaluate q34c_trial_005 CV quantum head on the MobileNetV3-Large backbone.
+      Paused to prioritize binary classical publication campaign.
+    depends_on: feature_extractor
+    resume_after: Q61 (binary_classical_publication_package)
+
+  binary_classical_publication:
+    status: ACTIVE
+    campaign: binary_classical_publication_package
+    first_ready_slice: Q55
+    final_slice: Q61
+    started_date: "2026-06-02"
+
+scientific_principles:
+  - name: Classical Ceiling Principle
+    rule: Classical NAS precedes quantum NAS. Frozen binary benchmarks define the floor.
+  - name: No Quantum Advantage Claim
+    rule: DV/CV residual advantages are scientifically interesting but not statistically validated.
+  - name: Multi-Objective Optimization
+    rule: No single-metric optimization. Pareto frontier across AUROC, F1, params, latency.
+  - name: Binary Uplift Before Multiclass
+    rule: Phase 6b + publication campaign must complete before Phase 7 begins.
+  - name: Reproducibility-First
+    rule: Every experiment reconstructable from frozen config and git commit SHA.

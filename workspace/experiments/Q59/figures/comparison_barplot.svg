@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="420" font-family="monospace,sans-serif">
+<rect width="700" height="420" fill="#fafafa"/>
+<text x="350" y="30" text-anchor="middle" font-size="14" font-weight="bold" fill="#222">Q59: AUROC Comparison — Classical CNN vs DV-QNN vs CV-QNN</text>
+
+<!-- Gridlines and y-axis labels -->
+<line x1="65" y1="55" x2="680" y2="55" stroke="#ddd" stroke-width="1"/>
+<text x="60" y="59" text-anchor="end" font-size="10" fill="#555">1.02</text>
+<line x1="65" y1="103" x2="680" y2="103" stroke="#ddd" stroke-width="1"/>
+<text x="60" y="107" text-anchor="end" font-size="10" fill="#555">0.98</text>
+<line x1="65" y1="151" x2="680" y2="151" stroke="#ddd" stroke-width="1"/>
+<text x="60" y="155" text-anchor="end" font-size="10" fill="#555">0.94</text>
+<line x1="65" y1="199" x2="680" y2="199" stroke="#ddd" stroke-width="1"/>
+<text x="60" y="203" text-anchor="end" font-size="10" fill="#555">0.90</text>
+<line x1="65" y1="247" x2="680" y2="247" stroke="#ddd" stroke-width="1"/>
+<text x="60" y="251" text-anchor="end" font-size="10" fill="#555">0.86</text>
+<line x1="65" y1="295" x2="680" y2="295" stroke="#ddd" stroke-width="1"/>
+<text x="60" y="299" text-anchor="end" font-size="10" fill="#555">0.82</text>
+<line x1="65" y1="343" x2="680" y2="343" stroke="#ddd" stroke-width="1"/>
+<text x="60" y="347" text-anchor="end" font-size="10" fill="#555">0.80</text>
+
+<!-- Axis -->
+<line x1="65" y1="343" x2="680" y2="343" stroke="#888" stroke-width="1.5"/>
+<line x1="65" y1="55" x2="65" y2="343" stroke="#888" stroke-width="1.5"/>
+
+<!-- Axis labels -->
+<text x="372" y="410" text-anchor="middle" font-size="11" fill="#333">Dataset</text>
+<text x="14" y="199" text-anchor="middle" font-size="11" fill="#333" transform="rotate(-90,14,199)">AUROC</text>
+
+<!-- ============ VinDr-SpineXR group (x center ~207) ============ -->
+<!-- CNN bar: AUROC=0.97306, y_px = 343 - (0.97306-0.80)/(1.02-0.80)*(343-55) = 343 - (0.17306/0.22)*288 = 343 - 226.7 = 116.3 -->
+<rect x="90" y="116" width="55" height="227" fill="#2166ac" opacity="0.85"/>
+<text x="117" y="112" text-anchor="middle" font-size="8" fill="#333">0.9731</text>
+<!-- CI: ci_lo=0.9685 → y=343-(0.1485/0.22)*288=343-194.4=148.6; ci_hi=0.9776 → y=343-(0.1776/0.22)*288=343-232.5=110.5 -->
+<line x1="117" y1="110" x2="117" y2="149" stroke="#333" stroke-width="1.5"/>
+<line x1="114" y1="110" x2="120" y2="110" stroke="#333" stroke-width="1.5"/>
+<line x1="114" y1="149" x2="120" y2="149" stroke="#333" stroke-width="1.5"/>
+
+<!-- DV-QNN bar: AUROC=0.88421, y_px = 343 - (0.08421/0.22)*288 = 343 - 110.2 = 232.8 -->
+<rect x="152" y="233" width="55" height="110" fill="#d6604d" opacity="0.85"/>
+<text x="179" y="229" text-anchor="middle" font-size="8" fill="#333">0.8842</text>
+<!-- CI: lo=0.8822 → (0.0822/0.22)*288=107.5 → 235.5; hi=0.8863 → (0.0863/0.22)*288=113.0 → 230.0 -->
+<line x1="179" y1="230" x2="179" y2="236" stroke="#333" stroke-width="1.5"/>
+<line x1="176" y1="230" x2="182" y2="230" stroke="#333" stroke-width="1.5"/>
+<line x1="176" y1="236" x2="182" y2="236" stroke="#333" stroke-width="1.5"/>
+
+<!-- CV-QNN bar: AUROC=0.95339, y_px = 343-(0.15339/0.22)*288=343-200.9=142.1 -->
+<rect x="214" y="142" width="55" height="201" fill="#4dac26" opacity="0.85"/>
+<text x="241" y="138" text-anchor="middle" font-size="8" fill="#333">0.9534</text>
+<!-- CI: lo=0.9510 → (0.1510/0.22)*288=197.7→145.3; hi=0.9558 → (0.1558/0.22)*288=203.9→139.1 -->
+<line x1="241" y1="139" x2="241" y2="145" stroke="#333" stroke-width="1.5"/>
+<line x1="238" y1="139" x2="244" y2="139" stroke="#333" stroke-width="1.5"/>
+<line x1="238" y1="145" x2="244" y2="145" stroke="#333" stroke-width="1.5"/>
+
+<!-- VinDr label -->
+<text x="179" y="368" text-anchor="middle" font-size="10" fill="#333">VinDr-SpineXR</text>
+
+<!-- ============ BUU-LSPINE group (x center ~490) ============ -->
+<!-- All AUROC = 1.0, y_px = 343-(0.20/0.22)*288 = 343-261.8 = 81.2 -->
+<rect x="383" y="81" width="55" height="262" fill="#2166ac" opacity="0.85"/>
+<text x="410" y="77" text-anchor="middle" font-size="8" fill="#333">1.0000</text>
+
+<rect x="445" y="81" width="55" height="262" fill="#d6604d" opacity="0.85"/>
+<text x="472" y="77" text-anchor="middle" font-size="8" fill="#333">1.0000</text>
+
+<rect x="507" y="81" width="55" height="262" fill="#4dac26" opacity="0.85"/>
+<text x="534" y="77" text-anchor="middle" font-size="8" fill="#333">1.0000</text>
+
+<!-- BUU label -->
+<text x="472" y="368" text-anchor="middle" font-size="10" fill="#333">BUU-LSPINE</text>
+
+<!-- Legend -->
+<rect x="90" y="385" width="12" height="12" fill="#2166ac"/>
+<text x="106" y="395" font-size="10" fill="#333">Classical CNN (Q56)</text>
+<rect x="260" y="385" width="12" height="12" fill="#d6604d"/>
+<text x="276" y="395" font-size="10" fill="#333">DV-QNN (Q57)</text>
+<rect x="400" y="385" width="12" height="12" fill="#4dac26"/>
+<text x="416" y="395" font-size="10" fill="#333">CV-QNN (Q58)</text>
+</svg>

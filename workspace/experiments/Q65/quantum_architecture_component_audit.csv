@@ -1,0 +1,23 @@
+model,component,layer_type,position,params,trainable,frozen,quantum_or_classical,pct_of_head_trainable,role,scientific_issue
+DV-QNN,MobileNetV3-Large backbone,CNN,pre-head,5483032,no,yes,classical,n/a,image feature extraction,dominant representational capacity; not quantum
+DV-QNN,Frozen projection Linear(960->128),Linear,pre-head,123008,no,yes,classical,n/a,dimensionality reduction,no learning; random init seed=42
+DV-QNN,Projection Linear(128->4),Linear,before_quantum,516,yes,no,classical,89.9%,compress embedding to n_qubits=4 inputs,classical layer dominates head; 89.9% of trainable params
+DV-QNN,Quantum theta parameters (depth=1 x 2 x 4 x 3),Parameter tensor,quantum_circuit,24,yes,no,quantum,4.2%,variational rotation angles RX/RY/RZ per qubit,only 4.2% of trainable head is quantum
+DV-QNN,medical_ansatz circuit (H + data reupload + variational + CNOT),Circuit,quantum_circuit,0,no,no,quantum,0%,non-linear feature map in Hilbert space,parameterized by theta; no independent params
+DV-QNN,DV backend compile+run,Unitary,quantum_circuit,0,no,no,quantum,0%,compile circuit to 16x16 unitary; apply to vacuum,CPU-only kronecker product; exponential memory
+DV-QNN,Readout Linear(16->2),Linear,after_quantum,34,yes,no,classical,5.9%,map 16-dim Born-rule probs to class logits,SCIENTIFIC ISSUE: classical layer makes final decision; quantum output not used directly for classification
+DV-QNN,TOTAL HEAD,,,574,yes,no,hybrid,100%,,,24/574 = 4.2% quantum; 550/574 = 95.8% classical
+CV-QNN,MobileNetV3-Large backbone,CNN,pre-head,5483032,no,yes,classical,n/a,image feature extraction,same as DV-QNN
+CV-QNN,Frozen projection Linear(960->128),Linear,pre-head,123008,no,yes,classical,n/a,dimensionality reduction,same as DV-QNN
+CV-QNN,Encoder Linear(128->4),Linear,before_quantum,516,yes,no,classical,97.0%,compress embedding to 2*n_modes=4 phase-space inputs,classical layer dominates head; 97.0% of trainable params
+CV-QNN,disp_real (depth=1 x n_modes=2),Parameter tensor,quantum_circuit,2,yes,no,quantum,0.4%,real part of displacement alpha per mode,
+CV-QNN,disp_imag (depth=1 x n_modes=2),Parameter tensor,quantum_circuit,2,yes,no,quantum,0.4%,imaginary part of displacement alpha per mode,
+CV-QNN,squeezing_raw (depth=1 x n_modes=2),Parameter tensor,quantum_circuit,2,yes,no,quantum,0.4%,bounded squeezing r via tanh(r_raw)*1.5,
+CV-QNN,bs_theta (depth=1 x n_modes=2),Parameter tensor,quantum_circuit,2,yes,no,quantum,0.4%,beamsplitter angle per mode pair,
+CV-QNN,rot_phi (depth=1 x n_modes=2),Parameter tensor,quantum_circuit,2,yes,no,quantum,0.4%,phase rotation angle per mode,
+CV-QNN,GaussianBackend (symplectic evolution),Symplectic,quantum_circuit,0,no,no,quantum,0%,apply D+S+R+BS to (mu Sigma); no trainable params,
+CV-QNN,Readout Linear(2->2),Linear,after_quantum,6,yes,no,classical,1.1%,map 2 homodyne X-quadrature values to class logits,SCIENTIFIC ISSUE: 2 classical params still make final decision; homodyne output not used directly
+CV-QNN,TOTAL HEAD,,,532,yes,no,hybrid,100%,,,10/532 = 1.9% quantum; 522/532 = 98.1% classical
+CNN-baseline,MobileNetV3-Large backbone,CNN,pre-head,5483032,no,yes,classical,n/a,image feature extraction,reference
+CNN-baseline,Frozen projection Linear(960->128),Linear,pre-head,123008,no,yes,classical,n/a,dimensionality reduction,reference
+CNN-baseline,MLP head (2-layer),MLP,head,2250,yes,no,classical,100%,binary classification on 128-dim features,reference; 100% classical; 4x more params than DV-QNN head

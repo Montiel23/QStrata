@@ -1,0 +1,44 @@
+paradigm,metric,formula_or_source,required_for_computation,when_computable,priority,notes
+DV-QNN,state_purity,"Tr(rho^2); rho=|psi><psi| => always 1 for pure state from unitary circuit","statevector |psi> from backend.run()",inference_pass,low,"Always 1 for single-sample pure unitary evolution from vacuum; informative only for noisy or mixed-state simulation"
+DV-QNN,class_conditioned_fidelity,"|<psi_class0|psi_class1>|^2; Fidelity between mean class-0 and class-1 states","collect statevectors per class during inference; compute mean class states",inference_pass_with_logging,high,"Key metric for state separation; high fidelity = poor quantum discrimination"
+DV-QNN,trace_distance,"T(rho0,rho1) = 0.5*||rho0 - rho1||_1","class-conditioned density matrices rho_c = mean(|psi_i><psi_i|) for c in {0,1}",inference_pass_with_logging,high,"Symmetric bound on distinguishability; T=0 means indistinguishable; T=1 means perfectly distinguishable"
+DV-QNN,measurement_entropy_per_sample,"S = -sum_i p_i * log2(p_i) over 16 basis states","16-dim Born-rule probability vector p from current circuit output",inference_pass,medium,"High entropy = diffuse state; low entropy = concentrated; should track across epochs"
+DV-QNN,mean_measurement_entropy_by_class,"mean S conditioned on class label","per-sample entropy + class labels",inference_pass,medium,"If class-conditioned entropy differs, circuit is learning class-discriminative structure"
+DV-QNN,probability_margin,"max(p_class1_states) - max(p_class0_states) or max p_i - second max p_i","16-dim prob vector",inference_pass,high,"Proxy for quantum decision confidence without classical readout layer"
+DV-QNN,born_rule_class_score,"sum of p_i for i in class-1 basis states","16-dim prob vector + class-to-state mapping (proposed: even parity -> class 0; odd parity -> class 1)",design_required,critical,"Core of pure DV-QNN readout; replaces Linear(16->2)"
+DV-QNN,hilbert_space_dimension,2^n_qubits,n_qubits=4,already_computed,info,16
+DV-QNN,n_qubits,config,config,already_computed,info,4
+DV-QNN,circuit_depth,config,config,already_computed,info,1
+DV-QNN,n_quantum_layers,depth * 1 variational layer per depth,config,already_computed,info,1
+DV-QNN,n_trainable_quantum_params,"depth * 2 * n_qubits * 3 = 1*2*4*3",config,already_computed,info,24
+DV-QNN,n_trainable_classical_params,proj(516) + readout(34),config,already_computed,info,550
+DV-QNN,quantum_classical_param_ratio,24/550,config,already_computed,info,0.044
+DV-QNN,compression_ratio_cnn_to_quantum,128/4,config,already_computed,info,32:1
+DV-QNN,gate_count_per_sample,"4H + 8 encoding + 12 variational + 8 CNOT",config,already_computed,info,32
+DV-QNN,gradient_norm_theta,"||d_loss/d_theta||_2 at each epoch","gradient tape during training step",training_loop_instrumentation,high,"Proxy for trainability; near-zero gradient = barren plateau"
+DV-QNN,gradient_norm_proj,"||d_loss/d_proj||_2 at each epoch","gradient tape during training step",training_loop_instrumentation,medium,"Checks that classical encoder is actually being updated"
+DV-QNN,expressibility_proxy,"Var_theta[|<phi_i|phi_j>|^2] over Haar-random theta samples","sample N random theta; run N*(N-1)/2 fidelity pairs",offline_computation,medium,"Low variance = high expressibility; near 1/(2^n+1) for Haar-random"
+DV-QNN,entanglement_capability,"Meyer-Wallach measure Q on output states","statevector from circuit",inference_pass_with_logging,medium,"Measures circuit ability to produce entangled states; Q=0 separable; Q=1 maximally entangled"
+DV-QNN,snr_proxy,"(mean_prob_correct_class - mean_prob_wrong_class) / std_prob_correct_class","per-sample Born-rule probs + labels",inference_pass,medium,"Operational SNR in measurement space without classical layer"
+CV-QNN,state_purity_gaussian,"mu = 1/sqrt(det(2*Sigma/hbar)) for Gaussian state","covariance matrix Sigma from GaussianBackend",inference_pass_with_logging,medium,"Vacuum is pure (purity=1); purity decreases with noise; current deterministic sim always pure"
+CV-QNN,class_conditioned_gaussian_fidelity,"F(rho0,rho1) for Gaussian states via Uhlmann formula","(mu_0,Sigma_0) and (mu_1,Sigma_1) averaged per class",inference_pass_with_logging,critical,"Key metric for CV state separation; requires per-class (mu,cov) collection"
+CV-QNN,mean_displacement_separation,"||E[mu | class=0] - E[mu | class=1]||_2","per-sample mu vector + class labels",inference_pass_with_logging,critical,"Displacement separation in phase space; directly interpretable; primary figure for publication"
+CV-QNN,covariance_matrix_trace,"Tr(Sigma) per sample","Sigma from GaussianBackend",inference_pass_with_logging,medium,"Total quadrature variance; should differ between classes if circuit is discriminative"
+CV-QNN,x_quadrature_distribution_separation,"KL(p(X | class=0) || p(X | class=1)) or Bhattacharyya distance","per-class homodyne X-quadrature values mu[::2]",inference_pass_with_logging,critical,"Directly measures how well homodyne X readout separates classes; enables pure readout design"
+CV-QNN,p_quadrature_variance,"Sigma[2*i+1, 2*i+1] per mode i","Sigma from GaussianBackend",inference_pass_with_logging,low,"P-quadrature variance; increases with squeezing; relevant for squeezing analysis"
+CV-QNN,squeezing_values_post_training,"tanh(squeezing_raw[d,i]) * squeezing_cap for each d,i","squeezing_raw parameter from trained model checkpoint",from_checkpoints_q62a,high,"Post-training squeezing; compare to init (0.037) to see how much squeezing is learned"
+CV-QNN,squeezing_cap_utilization_post_training,"max(|bounded_squeezing|) / squeezing_cap","from Q62A checkpoints",from_checkpoints_q62a,high,"Cap utilization at convergence; low utilization suggests cap is not binding"
+CV-QNN,homodyne_x_class_margin,"mean(X | class=1) - mean(X | class=0) per mode","per-class X-quadrature means",inference_pass_with_logging,critical,"Main signal for pure homodyne threshold readout; larger = better quantum discrimination"
+CV-QNN,dual_homodyne_joint_separation,"2D separation in (X_mode0, X_mode1) space","per-sample (mu[0], mu[2]) + class labels",inference_pass_with_logging,high,"Feasibility analysis for dual-homodyne readout; 2D scatter by class"
+CV-QNN,n_modes,config,config,already_computed,info,2
+CV-QNN,circuit_depth,config,config,already_computed,info,1
+CV-QNN,n_gaussian_layers,depth,config,already_computed,info,1
+CV-QNN,n_trainable_quantum_params,"disp_real(2)+disp_imag(2)+squeezing_raw(2)+bs_theta(2)+rot_phi(2)",config,already_computed,info,10
+CV-QNN,n_trainable_classical_params,encoder(516) + readout(6),config,already_computed,info,522
+CV-QNN,quantum_classical_param_ratio,10/522,config,already_computed,info,0.019
+CV-QNN,compression_ratio_cnn_to_cv,128/4,config,already_computed,info,32:1
+CV-QNN,gradient_norm_ansatz,"||d_loss/d_ansatz_params||_2 at each epoch","gradient tape during training",training_loop_instrumentation,high,"Checks quantum ansatz receives useful gradient signal"
+CV-QNN,gradient_norm_encoder,"||d_loss/d_encoder||_2 at each epoch","gradient tape during training",training_loop_instrumentation,medium,"Checks classical encoder is updated"
+CV-QNN,electronic_noise_ablation,"add Gaussian noise N(0, sigma_e^2) to homodyne output; sweep sigma_e","modify inference to add noise at measurement step",ablation_study,medium,"Models real detector noise; tests robustness of quantum readout"
+CV-QNN,squeezing_cap_sweep,"vary squeezing_cap in {0.5, 1.0, 1.5, 2.0, 2.5}; re-train","modify GaussianVariationalAnsatz squeezing_cap",ablation_study,medium,"Tests sensitivity of CV circuit to squeezing bound"
+CV-QNN,snr_homodyne,"(mu_class1[i] - mu_class0[i])^2 / (Sigma_class1[2i,2i] + Sigma_class0[2i,2i]) per mode","class-conditioned (mu,Sigma)",inference_pass_with_logging,high,"Classical SNR analog for homodyne X-quadrature; key figure for CV advantage claim"

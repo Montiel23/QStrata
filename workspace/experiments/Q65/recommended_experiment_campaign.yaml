@@ -1,0 +1,277 @@
+campaign_id: PURE-QUANTUM-READOUT-STUDY
+version: "1.0"
+date: "2026-06-04"
+parent_campaign: QSTRATA-BINARY-CLASSIFICATION
+scientific_goal: >
+  Redesign quantum classification experiments to study the actual contribution of
+  the quantum circuit — not just use it as a small non-linear module wrapped by
+  classical layers. Shift from hybrid-with-classical-readout to designs where
+  quantum measurement outcomes drive classification.
+framework_constraint: >
+  Custom in-house qcore only.
+  No PennyLane, Qiskit, Strawberry Fields, TorchQuantum, or any external quantum library.
+baseline_references:
+  Q56_CNN_AUROC_vindr: 0.9731
+  Q57_DV_QNN_AUROC_vindr: 0.8842
+  Q58_CV_QNN_AUROC_vindr: 0.9534
+  Q62A_checkpoints: "workspace/experiments/Q62A/checkpoints/"
+  Q49_embeddings: "workspace/experiments/Q49/embeddings/"
+
+slices:
+
+  Q66-DATASET-VISUALIZATION-AND-BINARY-MAPPING-FIGURES:
+    mode: visualization
+    goal: >
+      Generate publication-ready figures documenting the dataset pipeline,
+      binary conversion rationale, and data flow through the quantum architecture.
+    outputs:
+      - workspace/experiments/Q66/figures/raw_sample_grid.svg
+      - workspace/experiments/Q66/figures/processed_roi_grid.svg
+      - workspace/experiments/Q66/figures/class_distribution.svg
+      - workspace/experiments/Q66/figures/multiclass_to_binary_mapping.svg
+      - workspace/experiments/Q66/figures/data_flow_preprocessing.svg
+      - workspace/experiments/Q66/figures/embedding_to_quantum_encoding.svg
+      - workspace/experiments/Q66/figures/dv_qnn_circuit_diagram.svg
+      - workspace/experiments/Q66/figures/cv_qnn_circuit_diagram.svg
+      - workspace/experiments/Q66/figures/homodyne_readout_diagram.svg
+      - workspace/experiments/Q66/figures/probability_readout_diagram.svg
+      - reports/q66_dataset_visualization_and_binary_mapping.md
+    constraints:
+      - no_training
+      - no_new_data_generation
+      - no_push
+    pass_criteria:
+      - all 10 figures generated
+      - binary mapping rationale documented
+      - data flow pipeline illustrated end-to-end
+
+  Q67-DV-QNN-PROBABILITY-READOUT-SMOKE:
+    mode: smoke_test
+    goal: >
+      Implement and smoke-test DV-QNN with pure Born-rule probability readout,
+      replacing the classical Linear(16->2) with a measurement-based class score.
+      Three readout variants: parity, top-k probability mass, expectation value.
+    architecture:
+      input: "Q49 128-dim embeddings (VinDr-SpineXR)"
+      encoder: "Linear(128->4) [trainable, 516 params] — classical input compression only"
+      quantum_circuit: "medical_ansatz (4 qubits, depth=1, H+reupload+variational+CNOT)"
+      readout:
+        variant_A_parity: "P(class=1) = sum(p_i for i with odd-parity basis state); no trainable params after measurement"
+        variant_B_topk: "P(class=1) = sum of top-8 p_i assigned to class 1 via class-conditioned state assignment"
+        variant_C_expectation: "score = <Z_0> = sum_i (-1)^(bit_0(i)) * p_i; threshold at 0"
+      no_classical_readout_layer: true
+      optional_calibration: "if affine calibration needed: Linear(1->1) with bias=0 init, frozen during ablation"
+    seeds: [42]
+    epochs: 4
+    datasets: [vindr_spinexr]
+    metrics: [auroc, auprc, accuracy, f1, precision, recall, sensitivity, specificity, ppv, npv]
+    outputs:
+      - workspace/experiments/Q67/results/q67_smoke_results.json
+      - workspace/experiments/Q67/reports/q67_dv_qnn_probability_readout_smoke.md
+      - reports/q67_dv_qnn_probability_readout_smoke.md
+    constraints:
+      - custom_qcore_only
+      - no_external_quantum_frameworks
+      - no_push
+    pass_criteria:
+      - all 3 readout variants run without error
+      - AUROC logged for each variant
+      - comparison vs Q57 hybrid baseline documented
+      - quantum_only_params = 24 confirmed
+
+  Q68-CV-QNN-HOMODYNE-READOUT-SMOKE:
+    mode: smoke_test
+    goal: >
+      Implement and smoke-test CV-QNN with pure homodyne readout, replacing
+      the classical Linear(2->2) with a measurement-based threshold or distance rule.
+      Two readout variants: single homodyne threshold, dual homodyne centroid.
+    architecture:
+      input: "Q49 128-dim embeddings (VinDr-SpineXR)"
+      encoder: "Linear(128->4) [trainable, 516 params] — classical input compression only"
+      quantum_circuit: "GaussianVariationalAnsatz (2 modes, depth=1, D+S+R+BS ring)"
+      readout:
+        variant_A_single_homodyne: >
+          score = mu[0] (X-quadrature of mode 0);
+          class = 1 if score > learned_threshold else 0;
+          threshold is a single trainable scalar (1 param) initialized to 0
+        variant_B_dual_homodyne: >
+          features = (mu[0], mu[2]) = (X_mode0, X_mode1);
+          class = argmin_c ||features - centroid_c||_2;
+          centroids are 2 trainable 2D vectors (4 params) initialized to zero
+        variant_C_homodyne_difference: >
+          score = mu[0] - mu[2];
+          threshold-based binary decision (1 trainable param)
+      no_classical_linear_readout: true
+      optional_calibration: "threshold or centroid parameters are explicitly reported and ablated (frozen vs trained)"
+    seeds: [42]
+    epochs: 4
+    datasets: [vindr_spinexr]
+    metrics: [auroc, auprc, accuracy, f1, precision, recall, sensitivity, specificity, ppv, npv]
+    log_quantum_state:
+      - per_sample_mu_vector
+      - per_sample_x_quadratures
+      - class_conditioned_mu_mean
+      - homodyne_x_class_separation
+    outputs:
+      - workspace/experiments/Q68/results/q68_smoke_results.json
+      - workspace/experiments/Q68/results/q68_homodyne_stats.csv
+      - workspace/experiments/Q68/reports/q68_cv_qnn_homodyne_readout_smoke.md
+      - reports/q68_cv_qnn_homodyne_readout_smoke.md
+    constraints:
+      - custom_qcore_only
+      - no_external_quantum_frameworks
+      - no_push
+    pass_criteria:
+      - single homodyne variant runs without error
+      - dual homodyne variant runs without error
+      - AUROC logged for each variant
+      - homodyne X-quadrature class separation computed and logged
+      - quantum_only_params = 10 confirmed (plus <=4 readout calibration params)
+
+  Q69-DV-QNN-PURE-READOUT-BENCHMARK:
+    mode: benchmark
+    goal: >
+      Full 3-seed benchmark of the best-performing pure DV-QNN readout variant
+      from Q67 on both VinDr-SpineXR and BUU-LSPINE. Compare to Q57 hybrid baseline.
+    architecture: "best variant from Q67 + optional calibration layer ablation"
+    seeds: [42, 7, 123]
+    epochs: 4
+    datasets: [vindr_spinexr, buu_lspine]
+    metrics: [auroc, auprc, accuracy, f1, precision, recall, sensitivity, specificity, ppv, npv, confusion_matrix]
+    ablations:
+      - calibration_frozen_vs_trained
+      - encoder_frozen_vs_trained
+    outputs:
+      - workspace/experiments/Q69/results/
+      - workspace/experiments/Q69/reports/q69_dv_qnn_pure_readout_benchmark.md
+      - reports/q69_dv_qnn_pure_readout_benchmark.md
+    pass_criteria:
+      - 3-seed AUROC CI95 computed
+      - delta vs Q57 hybrid documented
+      - quantum_only_params confirmed
+
+  Q70-CV-QNN-HOMODYNE-READOUT-BENCHMARK:
+    mode: benchmark
+    goal: >
+      Full 3-seed benchmark of single-homodyne CV-QNN readout on VinDr-SpineXR
+      and BUU-LSPINE. Compare to Q58 hybrid baseline and Q69 DV-QNN pure readout.
+    seeds: [42, 7, 123]
+    epochs: 4
+    datasets: [vindr_spinexr, buu_lspine]
+    log_quantum_state:
+      - class_conditioned_mu_mean
+      - class_conditioned_sigma_mean
+      - homodyne_x_class_separation
+      - homodyne_x_snr
+    outputs:
+      - workspace/experiments/Q70/results/
+      - workspace/experiments/Q70/figures/homodyne_class_separation.svg
+      - workspace/experiments/Q70/reports/q70_cv_qnn_homodyne_readout_benchmark.md
+      - reports/q70_cv_qnn_homodyne_readout_benchmark.md
+
+  Q71-CV-QNN-DUAL-HOMODYNE-READOUT-BENCHMARK:
+    mode: benchmark
+    goal: >
+      Full 3-seed benchmark of dual-homodyne CV-QNN readout. Compare to Q70 single
+      homodyne to test whether using both modes improves discrimination.
+    seeds: [42, 7, 123]
+    epochs: 4
+    datasets: [vindr_spinexr, buu_lspine]
+    note: >
+      If dual-homodyne centroid params (4 params) are required: report as calibration layer.
+      Ablate: frozen vs trained centroids.
+    outputs:
+      - workspace/experiments/Q71/results/
+      - workspace/experiments/Q71/figures/dual_homodyne_class_scatter.svg
+      - workspace/experiments/Q71/reports/q71_cv_qnn_dual_homodyne_readout_benchmark.md
+      - reports/q71_cv_qnn_dual_homodyne_readout_benchmark.md
+
+  Q72-QUANTUM-METRICS-EXTRACTION:
+    mode: analysis
+    goal: >
+      Re-run inference on all Q62A saved checkpoints with extended quantum state
+      logging to extract: class-conditioned state separation (DV: fidelity+trace
+      distance; CV: mean displacement separation+covariance diagnostics+homodyne SNR),
+      measurement entropy (DV), post-training squeezing utilization (CV),
+      gradient norms (both), Born-rule probability margins (DV).
+    inputs:
+      checkpoints: workspace/experiments/Q62A/checkpoints/
+      embeddings: workspace/experiments/Q49/embeddings/
+    outputs:
+      - workspace/experiments/Q72/results/dv_qnn_quantum_metrics.csv
+      - workspace/experiments/Q72/results/cv_qnn_quantum_metrics.csv
+      - workspace/experiments/Q72/results/dv_qnn_class_separation.json
+      - workspace/experiments/Q72/results/cv_qnn_class_separation.json
+      - workspace/experiments/Q72/figures/dv_measurement_entropy_by_class.svg
+      - workspace/experiments/Q72/figures/cv_homodyne_class_separation.svg
+      - workspace/experiments/Q72/figures/cv_displacement_phase_space.svg
+      - workspace/experiments/Q72/reports/q72_quantum_metrics_extraction.md
+      - reports/q72_quantum_metrics_extraction.md
+    constraints:
+      - no_training
+      - no_push
+    pass_criteria:
+      - class_conditioned_fidelity computed for DV-QNN
+      - mean_displacement_separation computed for CV-QNN
+      - homodyne_x_snr computed for CV-QNN
+      - measurement_entropy computed for DV-QNN per class
+
+  Q73-NOISE-AND-DETECTOR-ABLATION:
+    mode: ablation
+    goal: >
+      Sweep noise and detector parameters to test robustness of pure quantum readout
+      models from Q69/Q70/Q71 without re-training (apply noise at inference only).
+    ablations:
+      dv_qnn:
+        - theta_noise_sweep: "add Gaussian noise N(0,sigma^2) to theta; sigma in {0.01, 0.05, 0.1, 0.2}"
+        - input_noise_sweep: "add Gaussian noise to proj output x_i; sigma in {0.01, 0.05, 0.1}"
+      cv_qnn:
+        - electronic_noise_sweep: "add N(0,sigma_e^2) to homodyne output; sigma_e in {0.01, 0.05, 0.1, 0.5}"
+        - squeezing_cap_sweep: "retrain with squeezing_cap in {0.5, 1.0, 1.5, 2.0, 2.5}"
+        - detector_efficiency_sweep: "scale homodyne output by eta in {0.5, 0.7, 0.9, 1.0}"
+    outputs:
+      - workspace/experiments/Q73/results/
+      - workspace/experiments/Q73/figures/noise_robustness_curves.svg
+      - workspace/experiments/Q73/reports/q73_noise_and_detector_ablation.md
+      - reports/q73_noise_and_detector_ablation.md
+
+  Q74-HYBRID-VS-PURE-QUANTUM-COMPARISON:
+    mode: analysis
+    goal: >
+      Aggregate results from Q57/Q58 (hybrid) and Q69/Q70/Q71 (pure readout)
+      and produce a unified comparison report and figures.
+    comparison_matrix:
+      models:
+        - classical_cnn_q56
+        - dv_qnn_hybrid_q57
+        - cv_qnn_hybrid_q58
+        - dv_qnn_pure_readout_q69
+        - cv_qnn_single_homodyne_q70
+        - cv_qnn_dual_homodyne_q71
+      metrics:
+        - auroc
+        - auprc
+        - f1
+        - n_trainable_params_total
+        - n_quantum_params
+        - quantum_classical_ratio
+        - runtime_per_seed_s
+        - class_conditioned_state_separation
+    outputs:
+      - workspace/experiments/Q74/results/comparison_table.csv
+      - workspace/experiments/Q74/figures/auroc_vs_quantum_param_ratio.svg
+      - workspace/experiments/Q74/figures/hybrid_vs_pure_bar_comparison.svg
+      - workspace/experiments/Q74/reports/q74_hybrid_vs_pure_quantum_comparison.md
+      - reports/q74_hybrid_vs_pure_quantum_comparison.md
+
+  Q75-PURE-QUANTUM-READOUT-FINAL-REPORT:
+    mode: paper_writing
+    goal: >
+      Synthesize all results from Q66–Q74 into a publication-ready paper section
+      and supplementary material covering: dataset, architecture, quantum metrics,
+      pure vs hybrid comparison, noise robustness, and quantum advantage analysis.
+    outputs:
+      - workspace/experiments/Q75/paper/main_sections.md
+      - workspace/experiments/Q75/paper/supplementary.md
+      - workspace/experiments/Q75/overleaf_bundle/
+      - reports/q75_pure_quantum_readout_final_report.md

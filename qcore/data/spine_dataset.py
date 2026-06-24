@@ -9,7 +9,7 @@ import cv2
 import pydicom
 
 class SpineCascadeDataset(Dataset):
-    def __init__(self, csv_file, img_dir, path_size=(28, 28), include_background=True):
+    def __init__(self, csv_file, img_dir, patch_size=(224, 224), include_background=True):
         """
         loader parsing multiclass annotations, variable slice channels,
         pairing ground-truth lesion boxes with random background control windows"
@@ -34,7 +34,7 @@ class SpineCascadeDataset(Dataset):
 
     def __len__(self):
         if self.include_background:
-            return len(self.bbox_annotations)
+            return len(self.bbox_annotations) * 2
         return len(self.bbox_annotations)
     
     def __getitem__(self, idx):
@@ -93,5 +93,11 @@ class SpineCascadeDataset(Dataset):
         patch_enhanced = clahe.apply(patch_8bit)
 
         final_patch = cv2.resize(patch_enhanced, self.patch_size).astype(np.float32) / 255.0
-        return torch.tensor(final_patch.flatten(), dtype=torch.float32), torch.tensor(label, dtype=torch.long)
+
+        #PCA approach
+        # return torch.tensor(final_patch.flatten(), dtype=torch.float32), torch.tensor(label, dtype=torch.long)
         
+        #CNN encoder approach
+        rgb_patch = np.stack([final_patch, final_patch, final_patch], axis=0)
+
+        return torch.tensor(rgb_patch, dtype=torch.float32), torch.tensor(label, dtype=torch.long)

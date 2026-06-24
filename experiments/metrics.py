@@ -1,6 +1,7 @@
 import torch
 from scipy.linalg import sqrtm
 import numpy as np
+from qcore.measurement.probability import measure_probability
 
 def compute_gaussian_fidelity(mu1, cov1, mu2, cov2, hbar=2.0):
     #compute fidelity between two multi-mode gaussian states based on bures fidelity for gaussian states
@@ -117,6 +118,14 @@ def analyze_state_separation(test_results, n_classes, hbar):
 #     return fidelity_matrix
 
 
+def get_stats(conf_matrix):
+    tp = torch.diag(conf_matrix).float()
+    fp = conf_matrix.sum(dim=0).float() - tp
+    fn = conf_matrix.sum(dim=1).float() - (tp + fp + fn)
+    tn = conf_matrix.sum().float() - (tp + fp + fn)
+    return tp, fp, tn, fn
+
+
 def count_quantum_resources(ansatz):
     #total trainable weights
     trainable_params = sum(p.numel() for p in ansatz.parameters() if p.requires_grad)
@@ -177,3 +186,104 @@ def get_entropy(state_vector, n_qubits):
 
     # return von neumann entropy
     return -torch.sum(eigvals * torch.log2(eigvals))
+
+
+def audit_quantum_register(model, data_loader, n_qubits, n_classes, device):
+    model.eval()
+    state_dim = 2 ** n_qubits
+
+    class_states = {c: torch.zeros(state_dim, device=device, dtype=torch.complex64) for c in range(n_classes)}
+    class_counts = {c: 0 for c in range(n_classes)}
+
+    purities = []
+
+    with torch.no_grad():
+        for images, labels in data_loader:
+            images = images.to(device)
+
+            #pass data through classical backbone and projection head
+            latent = model.feature_extractor(images)
+            latent = torch.flatten(latent, 1)
+            quantum_ready_features = model.quantum_projection_head(latent)
+            
+            #regenerate state vectors using the ansatz parameters
+            batch_size = images.size(0)
+            psi = torch.zeros(batch_size, state_dim, device=device, dtype=torch.complex64)
+            psi[:,0] = 1.0 + 0.0j
+
+            evolved_psi = model.dv_quantum_classifier.quantum_ansatz.apply(psi, quantum_ready_features)
+
+            #compute system purity: Tr(rho^2) = ||psi||^2
+            for b in range(batch_size):
+                purity = torch.real(torch.sum(torch.conj(evolved_psi[b])) * evolved_psi[b]).item()
+                purities.append(purity)
+
+                lbl = labels[b].item()
+
+                #global phase alignment
+                #extract phase angle
+                global_phase = torch.angle(evolved_psi[b, 0])
+                phase_rotation = torch.exp(-1j * global_phase)
+                aligned_psi = evolved_psi[b] * phase_rotation
+
+                #accumulate phase-aligned pure states safely
+                class_states[lbl] += aligned_psi
+                class_counts[lbl] += 1
+
+        
+
+
+    #normalize vectors to calculate centroid fidelity maps
+    mean_vectors = {}
+    for c in range(n_classes):
+        if class_counts[c] > 0:
+            norm = torch.norm(class_states[c])
+            mean_vectors[c] = class_states[c] / norm if norm > 0 else class_states[c]
+
+        else:
+            mean_vectors[c] = torch.zeros(state_dim, device=device, dtype=torch.complex64)
+
+    #compute uhlmann-jozsa state fidelity matrix
+    fidelity_matrix = np.zeros((n_classes, n_classes))
+    for i in range(n_classes):
+        for j in range(n_classes):
+            if class_counts[i] > 0 and class_counts[j] > 0:
+                overlap = torch.sum(torch.conj(mean_vectors[i]) * mean_vectors[j])
+                fidelity_matrix[i, j] = (torch.abs(overlap) ** 2).item()
+
+
+    return fidelity_matrix, np.mean(purities)
+
+
+
+def save_qubit_trajectory(model, sample_image, epoch, run_dir, device):
+    model.eval()
+    n_qubits = model.n_qubits
+
+    with torch.no_grad():
+        x = sample_image.unsqueeze(0).to(device)
+        latent = model.feature_extractor(x)
+        latent = torch.flatten(latent, 1)
+        quantum_ready_features = model.quantum_projection_head(latent)
+
+        #propagate state through the ansatz
+        state_dim = 2 ** n_qubits
+        psi = torch.zeros(1, state_dim, device=device, dtype=torch.complex64)
+        psi[:, 0] = 1.0 + 0.0j
+        evolved_psi = model.dv_quantum_classifier.quantum_ansatz.apply(psi, quantum_ready_features)
+
+        #collapse batched output axis to feed native unbatched measurement
+        single_state = evolved_psi[0]
+
+        qubit_expectations = []
+        for i in range(n_qubits):
+            p_one = measure_probability(single_state, measure_wire=i, n_qubits=n_qubits)
+
+            z_expectation = 1.0 - 2.0 * p_one
+            qubit_expectations.append(z_expectation.item())
+
+
+    output_path = os.path.join(run_dir, f"trajectory_epoch_{epoch}.npy")
+    np.save(output_path, np.array(qubit_expectations))
+
+

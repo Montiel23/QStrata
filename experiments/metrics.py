@@ -2,46 +2,71 @@ import torch
 from scipy.linalg import sqrtm
 import numpy as np
 from qcore.measurement.probability import measure_probability
+import os
+
+# def compute_gaussian_fidelity(mu1, cov1, mu2, cov2, hbar=2.0):
+#     #compute fidelity between two multi-mode gaussian states based on bures fidelity for gaussian states
+
+#     mu1, cov1 = np.array(mu1, dtype=np.float64), np.array(cov1, dtype=np.float64)
+#     mu2, cov2 = np.array(mu2, dtype=np.float64), np.array(cov2, dtype=np.float64)
+
+#     mu1 = mu1.flatten()
+#     mu2 = mu2.flatten()
+
+#     d_mu = mu1 - mu2
+#     V_avg = 0.5 * (cov1 + cov2)
+
+#     V_inv = np.linalg.inv(V_avg + np.eye(len(V_avg)) * 1e-7)
+
+#     d_mu_64 = d_mu.astype(np.float64)
+
+#     # print(f"DEBUG: MU1 NORM: {np.linalg.norm(mu1)}")
+#     # print(f"DEBUG: MU2 NORM: {np.linalg.norm(mu2)}")
+
+#     #ensure numerical stability with small epsilon
+#     # delta = 0.5 * d_mu.T @ np.linalg.inv(V_avg + np.eye(len(V_avg)) * 1e-6) @ d_mu
+#     delta = 0.5 * d_mu.T @ V_inv @ d_mu_64
+#     # delta = (1.0 / (2 * hbar)) * d_mu.T @ V_inv @ d_mu_64
+
+#     #covariance shape term
+#     #measure how much squeezing of class A matches class B
+
+#     det_V1 = np.linalg.det(cov1)
+#     det_V2 = np.linalg.det(cov2)
+#     det_Vavg = np.linalg.det(V_avg)
+
+#     #this drops if one state is highly squeezed and the other is not
+
+#     shape_overlap = np.sqrt(np.sqrt(det_V1 * det_V2) /det_Vavg)
+
+#     #final fidelity is combined score
+#     fidelity = shape_overlap * np.exp(-delta)
+
+#     return np.clip(fidelity, 0.0, 1.0)
 
 def compute_gaussian_fidelity(mu1, cov1, mu2, cov2, hbar=2.0):
-    #compute fidelity between two multi-mode gaussian states based on bures fidelity for gaussian states
-
-    mu1, cov1 = np.array(mu1, dtype=np.float64), np.array(cov1, dtype=np.float64)
-    mu2, cov2 = np.array(mu2, dtype=np.float64), np.array(cov2, dtype=np.float64)
-
-    mu1 = mu1.flatten()
-    mu2 = mu2.flatten()
+    """Computes exact Bures quantum state fidelity overlap between two multi-mode Gaussian states."""
+    mu1 = np.array(mu1, dtype=np.float64).flatten()
+    mu2 = np.array(mu2, dtype=np.float64).flatten()
+    cov1 = np.array(cov1, dtype=np.float64)
+    cov2 = np.array(cov2, dtype=np.float64)
 
     d_mu = mu1 - mu2
     V_avg = 0.5 * (cov1 + cov2)
 
     V_inv = np.linalg.inv(V_avg + np.eye(len(V_avg)) * 1e-7)
-
-    d_mu_64 = d_mu.astype(np.float64)
-
-    # print(f"DEBUG: MU1 NORM: {np.linalg.norm(mu1)}")
-    # print(f"DEBUG: MU2 NORM: {np.linalg.norm(mu2)}")
-
-    #ensure numerical stability with small epsilon
-    # delta = 0.5 * d_mu.T @ np.linalg.inv(V_avg + np.eye(len(V_avg)) * 1e-6) @ d_mu
-    delta = 0.5 * d_mu.T @ V_inv @ d_mu_64
-    # delta = (1.0 / (2 * hbar)) * d_mu.T @ V_inv @ d_mu_64
-
-    #covariance shape term
-    #measure how much squeezing of class A matches class B
+    delta = 0.5 * d_mu.T @ V_inv @ d_mu
 
     det_V1 = np.linalg.det(cov1)
     det_V2 = np.linalg.det(cov2)
     det_Vavg = np.linalg.det(V_avg)
 
-    #this drops if one state is highly squeezed and the other is not
+    shape_overlap = np.sqrt(
+        np.sqrt(max(det_V1 * det_V2, 1e-12)) / max(det_Vavg, 1e-12)
+    )
+    fidelity = shape_overlap * np.exp(-np.clip(delta, 0.0, 50.0))
 
-    shape_overlap = np.sqrt(np.sqrt(det_V1 * det_V2) /det_Vavg)
-
-    #final fidelity is combined score
-    fidelity = shape_overlap * np.exp(-delta)
-
-    return np.clip(fidelity, 0.0, 1.0)
+    return float(np.clip(fidelity, 0.0, 1.0))
 
 
 def apply_quantum_scaling(subset):
@@ -121,7 +146,7 @@ def analyze_state_separation(test_results, n_classes, hbar):
 def get_stats(conf_matrix):
     tp = torch.diag(conf_matrix).float()
     fp = conf_matrix.sum(dim=0).float() - tp
-    fn = conf_matrix.sum(dim=1).float() - (tp + fp + fn)
+    fn = conf_matrix.sum(dim=1).float() - (tp)
     tn = conf_matrix.sum().float() - (tp + fp + fn)
     return tp, fp, tn, fn
 
@@ -188,6 +213,173 @@ def get_entropy(state_vector, n_qubits):
     return -torch.sum(eigvals * torch.log2(eigvals))
 
 
+def compute_dv_pauli_tomography(model, data_loader, n_qubits, n_classes, class_names, run_dir, device):
+    model.eval()
+
+    #pauli matrices in complex float32
+    X = torch.tensor([[0, 1], [1,0]], dtype=torch.complex64, device=device)
+    Y = torch.tensor([[0, -1j], [1j, 0]], dtype=torch.complex64, device=device)
+    Z = torch.tensor([[1,0], [0, -1]], dtype=torch.complex64, device=device)
+    paulis = {"X": X, "Y":Y, "Z":Z}
+
+    class_states = {c: [] for c in range(n_classes)}
+
+    with torch.no_grad():
+        for batch_x, batch_y in data_loader:
+            batch_x = batch_x.to(device)
+            latent = torch.flatten(model.feature_extractor(batch_x), 1)
+            q_feats = model.quantum_projection_head(latent)
+
+            psi_batch = model.dv_quantum_classifier.get_state_vector(q_feats)
+
+            for i in range(batch_x.size(0)):
+                label = batch_y[i].item()
+                if label < n_classes:
+                    class_states[label].append(psi_batch[i])
+
+    tomography_data = {}
+
+    for c in range(n_classes):
+        if len(class_states[c]) == 0:
+            continue
+
+        states = torch.stack(class_states[c])
+        n_samples = states.size(0)
+        pauli_matrix = np.zeros((n_qubits, 3))
+
+        for q in range(n_qubits):
+            dim_left = 2**q
+            dim_right = 2 ** (n_qubits - q - 1)
+            states_reshaped = states.view(n_samples, dim_left, 2, dim_right)
+
+            for p_idx, (p_name, p_op) in enumerate(paulis.items()):
+                op_psi = torch.einsum("abcd,ce->abed", states_reshaped, p_op)
+                exp_vals = torch.real(torch.sum(torch.conj(states_reshaped) * op_psi, dim=[1, 2, 3]))
+                pauli_matrix[q, p_idx] = torch.mean(exp_vals).item()
+
+        tomography_data[c] = pauli_matrix
+
+    return tomography_data
+
+            # for p_idx, (p_name, p_op) in enumerate(paulis.items()):
+            #     full_op = torch.tensor([[1]], dtype=torch.complex64, device=device)
+            #     for k in range(n_qubits):
+            #         op = p_op if k == q else torch.eye(2, dtype=torch.complex64, device=device)
+
+            #     op_psi = torch.matmul(states, full_op)
+            #     exp_val = torch.real(torch.sum(torch.conj(states) * op_psi, dim=1))
+            #     pauli_matrix[q, p_idx] = torch.mean(exp_val).item()
+
+
+    #     tomography_data[c] = pauli_matrix
+
+    # return tomography_data
+
+
+def compute_cv_gaussian_tomography(
+    model, data_loader, n_modes, n_classes, device, hbar=2.0
+):
+    """Extracts phase-space quadrature expectations <q>, <p> and photon numbers <n> per class,
+
+    handling all batch_y tensor formats safely.
+    """
+    model.eval()
+
+    class_means = {c: [] for c in range(n_classes)}
+    class_covs = {c: [] for c in range(n_classes)}
+
+    with torch.no_grad():
+        for batch_x, batch_y in data_loader:
+            batch_x = batch_x.to(device)
+
+            # Unrolled forward pass for state extraction
+            latent = model.feature_extractor(batch_x)
+            latent = torch.flatten(latent, 1)
+            q_feats = torch.pi * model.quantum_projection_head(latent)
+
+            r_batch, v_batch = model.cv_quantum_classifier.get_gaussian_state(
+                q_feats
+            )
+
+            # Detach tensors to CPU
+            r_np = r_batch.detach().cpu().numpy()
+            v_np = v_batch.detach().cpu().numpy()
+
+            for i in range(batch_x.size(0)):
+                # Safely extract scalar integer label index
+                y_i = batch_y[i]
+                if isinstance(y_i, torch.Tensor):
+                    if y_i.ndim > 0 and y_i.numel() > 1:
+                        label = int(torch.argmax(y_i).item())
+                    else:
+                        label = int(y_i.item())
+                else:
+                    label = int(y_i)
+
+                if 0 <= label < n_classes:
+                    class_means[label].append(r_np[i])
+                    class_covs[label].append(v_np[i])
+
+    tomography_data = {}
+
+    for c in range(n_classes):
+        if len(class_means[c]) == 0 or len(class_covs[c]) == 0:
+            continue
+
+        r_c = np.mean(class_means[c], axis=0)  # [2N]
+        v_c = np.mean(class_covs[c], axis=0)  # [2N, 2N]
+
+        mode_stats = np.zeros((n_modes, 5))  # Cols: <q>, <p>, Var(q), Var(p), <n>
+
+        for k in range(n_modes):
+            q_idx, p_idx = 2 * k, 2 * k + 1
+            q_val, p_val = r_c[q_idx], r_c[p_idx]
+            var_q, var_p = v_c[q_idx, q_idx], v_c[p_idx, p_idx]
+
+            # Mean photon count: <n_k> = (Var(q) + Var(p) + q^2 + p^2 - hbar) / (2 * hbar)
+            n_k = (var_q + var_p + q_val**2 + p_val**2 - hbar) / (2.0 * hbar)
+            mode_stats[k] = [q_val, p_val, var_q, var_p, max(0.0, n_k)]
+
+        det_v = np.linalg.det(2.0 * v_c / hbar)
+        purity = 1.0 / np.sqrt(max(det_v, 1e-12))
+
+        tomography_data[c] = {
+            "mean_vector": r_c,
+            "covariance": v_c,
+            "mode_stats": mode_stats,
+            "purity": purity,
+        }
+
+    print(
+        f"[Tomography Audit] Successfully collected Gaussian states for {len(tomography_data)}/{n_classes} classes."
+    )
+    return tomography_data
+
+def compute_cv_fidelity_matrix(cv_tomography_data, n_classes, hbar=2.0):
+    """Generates full n_classes x n_classes Bures fidelity matrix with diagonal F(i, i) = 1.0."""
+    f_matrix = np.eye(n_classes, dtype=np.float64)
+
+    for i in range(n_classes):
+        for j in range(n_classes):
+            if i in cv_tomography_data and j in cv_tomography_data:
+                if i == j:
+                    f_matrix[i, j] = 1.0
+                else:
+                    mu1, cov1 = (
+                        cv_tomography_data[i]["mean_vector"],
+                        cv_tomography_data[i]["covariance"],
+                    )
+                    mu2, cov2 = (
+                        cv_tomography_data[j]["mean_vector"],
+                        cv_tomography_data[j]["covariance"],
+                    )
+
+                    f_matrix[i, j] = compute_gaussian_fidelity(
+                        mu1, cov1, mu2, cov2, hbar=hbar
+                    )
+
+    return f_matrix
+
 def audit_quantum_register(model, data_loader, n_qubits, n_classes, device):
     model.eval()
     state_dim = 2 ** n_qubits
@@ -211,11 +403,14 @@ def audit_quantum_register(model, data_loader, n_qubits, n_classes, device):
             psi = torch.zeros(batch_size, state_dim, device=device, dtype=torch.complex64)
             psi[:,0] = 1.0 + 0.0j
 
-            evolved_psi = model.dv_quantum_classifier.quantum_ansatz.apply(psi, quantum_ready_features)
+            # evolved_psi = model.dv_quantum_classifier.quantum_ansatz.apply(psi, quantum_ready_features)
+            evolved_psi = model.dv_quantum_classifier.get_state_vector(quantum_ready_features)
+
 
             #compute system purity: Tr(rho^2) = ||psi||^2
             for b in range(batch_size):
-                purity = torch.real(torch.sum(torch.conj(evolved_psi[b])) * evolved_psi[b]).item()
+                # purity = torch.real(torch.sum(torch.conj(evolved_psi[b])) * evolved_psi[b]).item()
+                purity = torch.sum(torch.abs(evolved_psi[b]) ** 2).item()
                 purities.append(purity)
 
                 lbl = labels[b].item()
@@ -229,8 +424,6 @@ def audit_quantum_register(model, data_loader, n_qubits, n_classes, device):
                 #accumulate phase-aligned pure states safely
                 class_states[lbl] += aligned_psi
                 class_counts[lbl] += 1
-
-        
 
 
     #normalize vectors to calculate centroid fidelity maps
@@ -270,7 +463,9 @@ def save_qubit_trajectory(model, sample_image, epoch, run_dir, device):
         state_dim = 2 ** n_qubits
         psi = torch.zeros(1, state_dim, device=device, dtype=torch.complex64)
         psi[:, 0] = 1.0 + 0.0j
-        evolved_psi = model.dv_quantum_classifier.quantum_ansatz.apply(psi, quantum_ready_features)
+        # evolved_psi = model.dv_quantum_classifier.quantum_ansatz.apply(psi, quantum_ready_features)
+        evolved_psi = model.dv_quantum_classifier.get_state_vector(quantum_ready_features)
+
 
         #collapse batched output axis to feed native unbatched measurement
         single_state = evolved_psi[0]

@@ -1,6 +1,7 @@
 import torch
 from tqdm import tqdm
 from experiments.metrics import get_stats, compute_metrics
+import numpy as np
 
 def test_spine_dv_engine(model, data_loader, criterion, n_classes, device):
     model.eval()
@@ -50,3 +51,44 @@ def test_spine_dv_engine(model, data_loader, criterion, n_classes, device):
     }
 
     return metrics_summary, all_y_true, all_y_logits
+
+
+# def test_spine_cv(model, test_loader, n_classes, class_names, run_dir, device, hbar=1.0):
+#     print("\n------------------")
+#     print("evaluating unseen test generalization")
+#     print("---------------------")
+
+#     model.eval()
+#     all_logits = []
+#     all_targets = []
+#     test_conf_matrix = torch.zeros(
+#         (n_classes, n_classes), dtype=torch.int32, device=device
+#     )
+
+#     with torch.no_grad():
+#         for batch_x, batch_y in test_loader:
+#             batch_x, batch_y = batch_x.to(device), batch_y.to(device)
+#             logits = model(batch_x)
+
+#             preds = torch.argmax(logits, dim=1)
+#             for t, p in zip(batch_y, preds):
+#                 test_conf_matrix[t, p] += 1
+
+#             all_logits.append(logits.cpu().numpy())
+#             all_targets.append(batch_y.cpu().numpy())
+
+#     test_logits = np.concatenate(all_logits, axis=0)
+#     test_targets = np.concatenate(all_targets, axis=0)
+
+#     test_acc, test_prec, test_rec, test_f1 = compute_metrics(
+#         *get_stats(test_conf_matrix)
+#     )
+
+#     print("\n" + "=" * 50)
+#     print("               TEST EVALUATION METRICS")
+#     print("=" * 50)
+#     print(f"Accuracy  : {test_acc.mean().item():.4f}")
+#     print(f"Precision : {test_prec.mean().item():.4f}")
+#     print(f"Recall    : {test_rec.mean().item():.4f}")
+#     print(f"F1-Score  : {test_f1.mean().item():.4f}")
+#     print("=" * 50 + "\n") 

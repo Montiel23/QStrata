@@ -22,4 +22,4 @@ old_experiments/
 *.png
 *.jpg
 *.jpeg
-
+*.npy

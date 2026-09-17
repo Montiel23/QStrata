@@ -138,7 +138,8 @@ def main():
 
     # Workspace directory allocation
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = f"results/vindr_spine_cv/{args.name}_{timestamp}"
+    # run_dir = f"results/vindr_spine_cv/{args.name}_{timestamp}"
+    run_dir = os.getcwd() + f"/results/spine_cv/{args.name}_{timestamp}"
     os.makedirs(run_dir, exist_ok=True)
     print(
         f"[Workspace] Logging all weights, metrics, and figures to: \n {run_dir}/\n"

@@ -23,3 +23,5 @@ old_experiments/
 *.jpg
 *.jpeg
 *.npy
+*.sif
+

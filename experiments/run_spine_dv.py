@@ -136,7 +136,8 @@ def main():
 
     #set up dedicated timestamped log directory
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_dir = f"results/vindr_spine_dv/{args.name}_{timestamp}"
+    # run_dir = f"results/vindr_spine_dv/{args.name}_{timestamp}"
+    run_dir = os.getcwd() + f"/results/spine_dv/{args.name}_{timestamp}"
     os.makedirs(run_dir, exist_ok=True)
     print(f"[Workspace] logging all weights, metrics, and figures to: \n {run_dir}/\n")
 
